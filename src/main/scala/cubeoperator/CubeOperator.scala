@@ -1,6 +1,7 @@
 package cubeoperator
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
 
 class CubeOperator(reducers: Int) {
 
@@ -21,6 +22,15 @@ class CubeOperator(reducers: Int) {
 
     val index = groupingAttributes.map(x => schema.indexOf(x))
     val indexAgg = schema.indexOf(aggAttribute)
+
+
+    println(rdd)
+    println(schema)
+    println(index)
+    println(indexAgg)
+    val rddm = rdd.map(x => (x.get(0), x.get(1)))
+    val rddmm = rdd.map(x => index.map(y => x.get(y)))
+
 
     //TODO Task 1
 
