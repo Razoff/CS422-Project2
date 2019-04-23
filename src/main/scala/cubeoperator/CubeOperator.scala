@@ -22,19 +22,25 @@ class CubeOperator(reducers: Int) {
 
     val index = groupingAttributes.map(x => schema.indexOf(x))
     val indexAgg = schema.indexOf(aggAttribute)
+    val range = Range(0, index.length)
+    val perms = Range(0, index.length).flatMap(i => range.combinations(i).toSet)
 
+    val step_one_map = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).groupBy(_._1).mapValues(_.map(_._2).sum) // TODO Suport all aggregates
 
-    println(rdd)
-    println(schema)
-    println(index)
-    println(indexAgg)
-    val rddm = rdd.map(x => (x.get(0), x.get(1)))
-    val rddmm = rdd.map(x => index.map(y => x.get(y)))
+    //step_one_map.take(10).foreach(println)
+    //step_one_map_beo.take(10).foreach(println)
 
+    val partial_upper = step_one_map.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x)
 
-    //TODO Task 1
+    val cubic = partial_upper.groupBy(_._1).mapValues(_.map(_._2).sum) // TODO Support all aggregates
 
-    null
+    //partial_upper.take(10).foreach(println)
+    //println("------------------------------------")
+    //cubic.take(10000).foreach(println) // Checked and found corresponding values
+
+    //cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).take(10).foreach(println)
+
+    return cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
   }
 
   def cube_naive(dataset: Dataset, groupingAttributes: List[String], aggAttribute: String, agg: String): RDD[(String, Double)] = {

@@ -46,7 +46,7 @@ object Main {
 
     //Perform the same query using SparkSQL
     val q1 = df.cube("lo_suppkey","lo_shipmode","lo_orderdate").agg(sum("lo_supplycost") as "sum supplycost")
-    q1.show(70,false)
+    q1.show(10,false)
 
 
   }
