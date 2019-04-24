@@ -38,7 +38,7 @@ class CubeOperator(reducers: Int) {
     //println("------------------------------------")
     //cubic.take(10000).foreach(println) // Checked and found corresponding values
 
-    //cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).take(10).foreach(println)
+    //cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).collect()
 
     return cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
   }
