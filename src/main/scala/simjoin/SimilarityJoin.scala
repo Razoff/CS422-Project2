@@ -51,17 +51,26 @@ class SimilarityJoin(numAnchors: Int, distThreshold:Int) extends java.io.Seriali
       return ret._2
     }
 
+    def outer_val(dist_to_closest_anchor : Int, dist_to_anchor : Int , d_threshold : Int): Boolean ={
+      return dist_to_anchor <= dist_to_closest_anchor + 2 * d_threshold
+    }
+
     // Spark does not allow nested map with RDDs so ....
     val clo = data.cartesian(anchors_val)
 
     // Compute dit dist for all possiple pairings
     val cloclo = clo.map(x=> (x._1, x._2, distance(x._1.get(attrIndex).asInstanceOf[String], x._2._1)) )
 
+    // Compute list of distance for future outer part computation
+    val intermediate = cloclo.groupBy(x => x._1).mapValues(_.map(y => y._3))
+
     // Keep only index with lowest distance
     val nex = cloclo.groupBy(x=> x._1).mapValues(_.minBy(y => y._3)).map(z => (z._1, z._2._2._2, z._2._3))
 
-    // Each row is matched with its cluster form is (Row, index, dist_to_index)
-    nex.take(10).foreach(println)
+    // RDD to the format : Row, AnchorIndex, Dist_to_closest_anchor, List(Belongs to outerpartition of ith anchor)
+    val nexnex = nex.zip(intermediate).map(x => (x._1._1, x._1._2, x._1._3, x._2._2.map(y => outer_val(x._1._3, y,distThreshold))))
+
+    nexnex.take(10).foreach(println)
 
     return null;
   }
