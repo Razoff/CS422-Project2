@@ -36,6 +36,8 @@ object Main {
 
     val res = cb.cube(dataset, groupingList, "lo_supplycost", "SUM")
 
+    res.take(20).foreach(println)
+
     /*
        The above call corresponds to the query:
        SELECT lo_suppkey, lo_shipmode, lo_orderdate, SUM (lo_supplycost)

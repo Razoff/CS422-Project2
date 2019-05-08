@@ -20,6 +20,8 @@ class CubeOperator(reducers: Int) {
     val rdd = dataset.getRDD()
     val schema = dataset.getSchema()
 
+    val lll = rdd.repartition(reducers)
+
     val index = groupingAttributes.map(x => schema.indexOf(x))
     val indexAgg = schema.indexOf(aggAttribute)
     val range = Range(0, index.length)
