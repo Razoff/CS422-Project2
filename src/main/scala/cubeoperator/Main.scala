@@ -36,7 +36,7 @@ object Main {
 
     val res = cb.cube(dataset, groupingList, "lo_supplycost", "SUM")
 
-    res.take(20).foreach(println)
+    res.filter(x=> x._1.contains("19971129")).take(200).foreach(println)
 
     /*
        The above call corresponds to the query:
