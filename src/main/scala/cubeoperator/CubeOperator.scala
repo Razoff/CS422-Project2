@@ -99,9 +99,17 @@ class CubeOperator(reducers: Int) {
 
         return ret
 
-      case "AVG" => // TODO implementation
-        return null;
-      case _ => return null;
+      case "AVG" =>
+        val count_rdd = cube(dataset, groupingAttributes, aggAttribute, "COUNT")
+
+        val sum_rdd = cube(dataset, groupingAttributes, aggAttribute, "SUM")
+
+        return count_rdd.join(sum_rdd).map(x => (x._1, x._2._2 / x._2._1) )
+
+      case _ =>
+        println("BAD AGGREGATE")
+
+        return null // Return null if bad aggregate
     }
 
     /*
