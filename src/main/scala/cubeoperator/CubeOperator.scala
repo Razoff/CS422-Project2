@@ -20,29 +20,35 @@ class CubeOperator(reducers: Int) {
     val rdd = dataset.getRDD()
     val schema = dataset.getSchema()
 
-    val lll = rdd.repartition(reducers)
+    val rdd_partition = rdd.repartition(reducers)
 
     val index = groupingAttributes.map(x => schema.indexOf(x))
     val indexAgg = schema.indexOf(aggAttribute)
     val range = Range(0, index.length)
-    val perms = Range(0, index.length).flatMap(i => range.combinations(i).toSet)
+    val perms = Range(0, index.length).flatMap(i => range.combinations(i).toSet) +: Vector(range)
 
-    val step_one_map = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).groupBy(_._1).mapValues(_.map(_._2).sum) // TODO Suport all aggregates
+    val partition_step_one = rdd_partition.mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))).groupBy(_._1).mapValues(_.map(_._2).sum)
 
-    //step_one_map.take(10).foreach(println)
-    //step_one_map_beo.take(10).foreach(println)
+    val partition_partial_upper = partition_step_one.mapPartitions( part => part.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x))
 
-    val partial_upper = step_one_map.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x)
+    val partial_cubic = partition_partial_upper.groupBy(_._1).mapValues(_.map(_._2).sum) // TODO Support all aggregates
 
-    val cubic = partial_upper.groupBy(_._1).mapValues(_.map(_._2).sum) // TODO Support all aggregates
-
-    //partial_upper.take(10).foreach(println)
-    //println("------------------------------------")
-    //cubic.take(10000).foreach(println) // Checked and found corresponding values
-
-    //cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).collect()
+    val cubic = partial_cubic.repartition(1).groupBy(_._1).mapValues(_.map(_._2).sum)
 
     return cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+
+    /*
+    THIS MULTILINE COMMENT HOLDS THE FIRST WORKING VERSION OF THE CODE BUT HAD NO PARTITIONING
+
+      val step_one_map = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).groupBy(_._1).mapValues(_.map(_._2).sum) // TODO Suport all aggregates
+      val partial_upper = step_one_map.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x)
+      val cubic = partial_upper.groupBy(_._1).mapValues(_.map(_._2).sum) // TODO Support all aggregates
+      cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).filter(x => x._2 == 61867).take(100).foreach(println)
+      return cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+
+     */
+
+
   }
 
   def cube_naive(dataset: Dataset, groupingAttributes: List[String], aggAttribute: String, agg: String): RDD[(String, Double)] = {
