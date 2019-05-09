@@ -34,7 +34,9 @@ object Main {
 
     var groupingList = List("lo_suppkey","lo_shipmode","lo_orderdate")
 
-    val res = cb.cube(dataset, groupingList, "lo_supplycost", "SUM")
+    //val res = cb.cube(dataset, groupingList, "lo_supplycost", "SUM")
+    val res = cb.cube(dataset, groupingList, "lo_supplycost", "AVG")
+
 
     res.filter(x=> x._1.contains("19971129")).take(200).foreach(println)
 

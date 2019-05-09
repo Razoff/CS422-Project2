@@ -26,10 +26,7 @@ class CubeOperator(reducers: Int) {
     val indexAgg = schema.indexOf(aggAttribute)
     val range = Range(0, index.length)
     val perms = Range(0, index.length).flatMap(i => range.combinations(i).toSet)
-
-
-    val single_lines = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
-
+    
     agg match {
       case "COUNT" =>
         val single_lines = rdd.map(x => ((index.map(y => x.get(y))), 1)).groupBy(_._1).mapValues(_.map(_._2).sum)
