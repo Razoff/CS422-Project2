@@ -67,9 +67,24 @@ class CubeOperator(reducers: Int) {
         val ret = cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).union(single_stringed).map(x => (x._1, x._2.toDouble))
 
         return ret
+
+      case "MAX" =>
+        val single_lines = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+
+        val single_stringed = single_lines.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+
+        val partition_step_one = rdd_partition.mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))).groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+
+        val partition_partial_upper = partition_step_one.mapPartitions( part => part.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x))
+
+        val partial_cubic = partition_partial_upper.groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+
+        val cubic = partial_cubic.repartition(1).groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+
+        val ret = cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).union(single_stringed).map(x => (x._1, x._2.toDouble))
+
+        return ret
         
-      case "MAX" => // TODO implementation
-        return null;
       case "AVG" => // TODO implementation
         return null;
       case _ => return null;
