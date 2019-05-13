@@ -23,6 +23,7 @@ class SimilarityJoin(numAnchors: Int, distThreshold:Int) extends java.io.Seriali
 
     val anchors = data.sample(false, fraction)
     val anchors_val : RDD[(String, Long)] = anchors.map(x => x.get(attrIndex).asInstanceOf[String]).zipWithIndex()
+    val true_anchors_nb = anchors.count()
 
     // Cut-off / edit distance -> Levenshtein
     def distance(s1: String, s2: String): Int = {
@@ -70,9 +71,22 @@ class SimilarityJoin(numAnchors: Int, distThreshold:Int) extends java.io.Seriali
     // RDD to the format : Row, AnchorIndex, Dist_to_closest_anchor, List(Belongs to outerpartition of ith anchor)
     val nexnex = nex.zip(intermediate).map(x => (x._1._1, x._1._2, x._1._3, x._2._2.map(y => outer_val(x._1._3, y,distThreshold))))
 
-    nexnex.take(10).foreach(println)
+    val range_rdd = List.range(0, true_anchors_nb)
 
-    return null;
+    // Filtered by partition , oputer partition
+    val list_fitered:List[RDD[String]]= for (i <- range_rdd) yield nexnex.filter(x => x._4.toList(i.toInt)).map(x => x._1.getAs[String](attrIndex))
+
+    val cross_filtered = list_fitered.map(x=> x.cartesian(x)) // match each element with every other element in its partition
+
+    // remove duplicate and sort tuples alphabetically for easy duplicates removing
+    val cross_sorted = cross_filtered.map(partion => partion.filter(x => !(x._1 == x._2)).map(x => if(x._1 > x._2) x.swap else x) )
+
+    // merge all partition and keep each pair only once
+    val union_job = cross_sorted.reduce(_ union _).distinct()
+
+    // Return only pairs smaller or equal to treshold EACH PAIR is evaluated ONCE
+    // The only duplicate distance evaluation is the one with anchor itself
+    return union_job.filter(x => distance(x._1, x._2) <= distThreshold)
   }
 }
 
