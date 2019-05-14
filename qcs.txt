@@ -1,0 +1,28 @@
+FROM BLINK_DB PAPER CONSIDER ONLY SHIT IN [WHERE, GROUPBY, HAVING] CLAUSES
+
+q1: shipdate, return_flag, linestatus
+
+q3: orderkey, shipdate
+
+q5: orderkey, suppkey, 
+
+q6: shipdate, discount, quantity
+
+q7: suppkey, orderkey, shipdate
+
+q9: suppkey , partkey, orderkey
+
+q10: orderkey, returnflag
+
+q11: --
+
+q12: shipmode, commitdate, shipdate, receipedate
+
+q17: partkey, quantity
+
+q18: orderkey quantity
+
+q19: quantity, shipmode, shipinstruct, partkey
+
+q20: partkey, suppkey, shipdate
+
