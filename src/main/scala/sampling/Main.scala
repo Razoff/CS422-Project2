@@ -15,7 +15,13 @@ object Main {
     val rdd = RandomRDDs.uniformRDD(sc, 100000)
     val rdd2 = rdd.map(f => Row.fromSeq(Seq(f * 2, (f*10).toInt)))
 
-    val table = session.createDataFrame(rdd2, StructType(
+    //rdd2.take(10).foreach(println)
+
+    val r2d2 = rdd2.map(x => Row.fromTuple(x.get(0), x.get(1).asInstanceOf[Double].toInt))
+
+    //r2d2.take(10).foreach(println)
+
+    val table = session.createDataFrame(r2d2, StructType(
       StructField("A1", DoubleType, false) ::
       StructField("A2", IntegerType, false) ::
       Nil
@@ -25,6 +31,19 @@ object Main {
     desc.lineitem = table
     desc.e = 0.1
     desc.ci = 0.95
+
+
+    val path_to_data = "./tpch_parquet_sf1/"
+
+    desc.customer = session.read.parquet(path_to_data + "customer.parquet")
+    desc.lineitem = session.read.parquet(path_to_data + "lineitem.parquet")
+    desc.nation = session.read.parquet(path_to_data + "nation.parquet")
+    desc.orders = session.read.parquet(path_to_data + "order.parquet")
+    desc.part = session.read.parquet(path_to_data + "part.parquet")
+    desc.partsupp = session.read.parquet(path_to_data + "partsupp.parquet")
+    desc.region = session.read.parquet(path_to_data + "region.parquet")
+    desc.supplier = session.read.parquet(path_to_data + "supplier.parquet")
+
 
     val tmp = Sampler.sample(desc.lineitem, 1000000, desc.e, desc.ci)
     desc.samples = tmp._1
