@@ -44,15 +44,33 @@ object Main {
     val t2 = System.nanoTime
             
     println((t2-t1)/(Math.pow(10,9)))
-    
+    //res.collect().foreach(println) // RETURNS 23
+
     /*
+    // own distanbce func
+    def edit_distance(s1: String, s2: String): Int = {
+      val dist = Array.tabulate(s2.length + 1, s1.length + 1) { (j, i) => if (j == 0) i else if (i == 0) j else 0 }
+
+      @inline
+      def minimum(i: Int*): Int = i.min
+
+      for {j <- dist.indices.tail
+           i <- dist(0).indices.tail} dist(j)(i) =
+        if (s2(j - 1) == s1(i - 1)) dist(j - 1)(i - 1)
+        else minimum(dist(j - 1)(i) + 1, dist(j)(i - 1) + 1, dist(j - 1)(i - 1) + 1)
+
+      dist(s2.length)(s1.length)
+    }
+
+
     // cartesian
     val t1Cartesian = System.nanoTime
     val cartesian = rdd.map(x => (x(attrIndex), x)).cartesian(rdd.map(x => (x(attrIndex), x)))
                                    .filter(x => (x._1._2(attrIndex).toString() != x._2._2(attrIndex).toString() && edit_distance(x._1._2(attrIndex).toString(), x._2._2(attrIndex).toString()) <= distanceThreshold))
                                    
-    println(cartesian.count)
+    println(cartesian.count) // RETURN 46 !! BOTH SWAP !! TODO ASK TA ABOUT SWAPPED VALUES
+    cartesian.collect().foreach(println)
     val t2Cartesian = System.nanoTime
-    println((t2Cartesian-t1Cartesian)/(Math.pow(10,9)))*/    
-  }     
+    println((t2Cartesian-t1Cartesian)/(Math.pow(10,9)))*/
+  }
 }
