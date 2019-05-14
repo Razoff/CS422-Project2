@@ -10,3 +10,4 @@ project/project
 .idea/
 .jar
 out/artifacts/CS422_Project2_jar/*.jar
+tpch_parquet_sf1
