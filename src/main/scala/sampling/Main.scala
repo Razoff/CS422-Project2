@@ -5,12 +5,24 @@ import org.apache.spark.mllib.random.RandomRDDs
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Row, SparkSession}
 
+import java.io._
+
 object Main {
   def main(args: Array[String]) {
+
+    val inputFile= "../lineorder_small.tbl"
+    val input = new File(getClass.getResource(inputFile).getFile).getPath
 
     val conf = new SparkConf().setAppName("app").setMaster("local[*]")
     val sc = SparkContext.getOrCreate(conf)
     val session = SparkSession.builder().getOrCreate();
+
+    val df = session.read
+      .format("com.databricks.spark.csv")
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .option("delimiter", "|")
+      .load(input)
 
     val rdd = RandomRDDs.uniformRDD(sc, 100000)
     val rdd2 = rdd.map(f => Row.fromSeq(Seq(f * 2, (f*10).toInt)))
@@ -36,7 +48,8 @@ object Main {
     val path_to_data = "./tpch_parquet_sf1/"
 
     desc.customer = session.read.parquet(path_to_data + "customer.parquet")
-    desc.lineitem = session.read.parquet(path_to_data + "lineitem.parquet")
+    desc.lineitem = df
+    //desc.lineitem = session.read.parquet(path_to_data + "lineitem.parquet")
     desc.nation = session.read.parquet(path_to_data + "nation.parquet")
     desc.orders = session.read.parquet(path_to_data + "order.parquet")
     desc.part = session.read.parquet(path_to_data + "part.parquet")
