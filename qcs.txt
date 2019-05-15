@@ -26,3 +26,46 @@ q19: quantity, shipmode, shipinstruct, partkey
 
 q20: partkey, suppkey, shipdate
 
+-----------------------------------------------------------------------------------
+
+APPEARANCE :
+
+shipdate 	5
+return_flag 	1
+linstatus 	1
+orderkey	6
+suppkey		4
+discount	1
+quantity	3
+partkey		4
+returnflag	2
+shipmode	2
+commitdate	1
+receipedate	1
+shipinstruct	1
+
+QCS we want to compute: (by order of importance)
+
+PERFECT
+(orderkey, suppkey, partkey, quantity, shipdate) > ("keys", quantity) > (keys)
+(shipdate, returnflag, linestatus) > drop one at random
+(shipdate, discount, quantity) > drop one at random
+(shipmode, shipdate, receipedate, commitdate) > drop dates
+(quantity, shipmode, shipinstruct, partkey) > drop partkey
+
+ECONOMIC
+(orderkey, suppkey, partkey, quantity)
+(shipdate, orderkey)
+(shipdate, shipmode, quantity)
+
+
+BUDGET
+(shipdate, orderkey)
+(orderkey, suppkey, partkey)
+(shipdate, shipmode, quantity)
+
+NIET
+(shipdate, orderkey)
+(shipdate, quantity)
+
+-----------------------------------------------------------------------------------
