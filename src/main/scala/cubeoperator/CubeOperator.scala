@@ -29,70 +29,150 @@ class CubeOperator(reducers: Int) {
     
     agg match {
       case "COUNT" =>
-        val single_lines = rdd.map(x => ((index.map(y => x.get(y))), 1)).groupBy(_._1).mapValues(_.map(_._2).sum)
+        val single_lines = rdd
+          .map(x => ((index.map(y => x.get(y))), 1))
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val single_stringed = single_lines.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+        val single_stringed = single_lines
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
 
-        val partition_step_one = rdd_partition.mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), 1))).groupBy(_._1).mapValues(_.map(_._2).sum)
+        val partition_step_one = rdd_partition
+          .mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), 1)))
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val partition_partial_upper = partition_step_one.mapPartitions( part => part.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x))
+        val partition_partial_upper = partition_step_one
+          .mapPartitions( part => part
+            .map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2)))
+            .flatMap(x => x))
 
-        val partial_cubic = partition_partial_upper.groupBy(_._1).mapValues(_.map(_._2).sum)
+        val partial_cubic = partition_partial_upper
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val cubic = partial_cubic.repartition(1).groupBy(_._1).mapValues(_.map(_._2).sum)
+        val cubic = partial_cubic
+          .repartition(1)
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val ret = cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).union(single_stringed).map(x => (x._1, x._2.toDouble))
+        val ret = cubic
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+          .union(single_stringed)
+          .map(x => (x._1, x._2.toDouble))
 
         return ret
 
       case "SUM" =>
-        val single_lines = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).groupBy(_._1).mapValues(_.map(_._2).sum)
+        val single_lines = rdd
+          .map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val single_stringed = single_lines.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+        val single_stringed = single_lines
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
 
-        val partition_step_one = rdd_partition.mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))).groupBy(_._1).mapValues(_.map(_._2).sum)
+        val partition_step_one = rdd_partition
+          .mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])))
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val partition_partial_upper = partition_step_one.mapPartitions( part => part.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x))
+        val partition_partial_upper = partition_step_one
+          .mapPartitions( part => part.map(x => perms
+            .map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2)))
+            .flatMap(x => x))
 
-        val partial_cubic = partition_partial_upper.groupBy(_._1).mapValues(_.map(_._2).sum)
+        val partial_cubic = partition_partial_upper
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val cubic = partial_cubic.repartition(1).groupBy(_._1).mapValues(_.map(_._2).sum)
+        val cubic = partial_cubic
+          .repartition(1)
+          .groupBy(_._1)
+          .mapValues(_.map(_._2).sum)
 
-        val ret = cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).union(single_stringed).map(x => (x._1, x._2.toDouble))
+        val ret = cubic
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+          .union(single_stringed)
+          .map(x => (x._1, x._2.toDouble))
 
         return ret
 
       case "MIN" =>
-        val single_lines = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).groupBy(_._1).mapValues(_.minBy(_._2)).map(x => x._2)
+        val single_lines = rdd
+          .map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))
+          .groupBy(_._1)
+          .mapValues(_.minBy(_._2))
+          .map(x => x._2)
 
-        val single_stringed = single_lines.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+        val single_stringed = single_lines
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
 
-        val partition_step_one = rdd_partition.mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))).groupBy(_._1).mapValues(_.minBy(_._2)).map(x => x._2)
+        val partition_step_one = rdd_partition
+          .mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])))
+          .groupBy(_._1)
+          .mapValues(_.minBy(_._2))
+          .map(x => x._2)
 
-        val partition_partial_upper = partition_step_one.mapPartitions( part => part.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x))
+        val partition_partial_upper = partition_step_one
+          .mapPartitions( part => part
+            .map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2)))
+            .flatMap(x => x))
 
-        val partial_cubic = partition_partial_upper.groupBy(_._1).mapValues(_.minBy(_._2)).map(x => x._2)
+        val partial_cubic = partition_partial_upper
+          .groupBy(_._1)
+          .mapValues(_.minBy(_._2))
+          .map(x => x._2)
 
-        val cubic = partial_cubic.repartition(1).groupBy(_._1).mapValues(_.minBy(_._2)).map(x => x._2)
+        val cubic = partial_cubic
+          .repartition(1)
+          .groupBy(_._1)
+          .mapValues(_.minBy(_._2))
+          .map(x => x._2)
 
-        val ret = cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).union(single_stringed).map(x => (x._1, x._2.toDouble))
+        val ret = cubic
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+          .union(single_stringed)
+          .map(x => (x._1, x._2.toDouble))
 
         return ret
 
       case "MAX" =>
-        val single_lines = rdd.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])).groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+        val single_lines = rdd
+          .map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))
+          .groupBy(_._1)
+          .mapValues(_.maxBy(_._2))
+          .map(x => x._2)
 
-        val single_stringed = single_lines.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+        val single_stringed = single_lines
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
 
-        val partition_step_one = rdd_partition.mapPartitions( pa => pa.map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))).groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+        val partition_step_one = rdd_partition
+          .mapPartitions( pa => pa
+            .map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int])))
+          .groupBy(_._1)
+          .mapValues(_.maxBy(_._2))
+          .map(x => x._2)
 
-        val partition_partial_upper = partition_step_one.mapPartitions( part => part.map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2))).flatMap(x => x))
+        val partition_partial_upper = partition_step_one
+          .mapPartitions( part => part
+            .map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2)))
+            .flatMap(x => x))
 
-        val partial_cubic = partition_partial_upper.groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+        val partial_cubic = partition_partial_upper
+          .groupBy(_._1)
+          .mapValues(_.maxBy(_._2))
+          .map(x => x._2)
 
-        val cubic = partial_cubic.repartition(1).groupBy(_._1).mapValues(_.maxBy(_._2)).map(x => x._2)
+        val cubic = partial_cubic
+          .repartition(1)
+          .groupBy(_._1)
+          .mapValues(_.maxBy(_._2))
+          .map(x => x._2)
 
-        val ret = cubic.map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2)).union(single_stringed).map(x => (x._1, x._2.toDouble))
+        val ret = cubic
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2))
+          .union(single_stringed).map(x => (x._1, x._2.toDouble))
 
         return ret
 
@@ -101,7 +181,9 @@ class CubeOperator(reducers: Int) {
 
         val sum_rdd = cube(dataset, groupingAttributes, aggAttribute, "SUM")
 
-        return count_rdd.join(sum_rdd).map(x => (x._1, x._2._2 / x._2._1) )
+        return count_rdd
+          .join(sum_rdd)
+          .map(x => (x._1, x._2._2 / x._2._1) )
 
       case _ =>
         println("BAD AGGREGATE")

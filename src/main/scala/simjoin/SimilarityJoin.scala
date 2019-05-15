@@ -51,23 +51,33 @@ class SimilarityJoin(numAnchors: Int, distThreshold:Int) extends java.io.Seriali
     val anchors_dist = anchor_cartesian.map(x=> (x._1, x._2, distance(x._1.get(attrIndex).asInstanceOf[String], x._2._1)) )
 
     // Compute list of distance for future outer part computation
-    val distances_list = anchors_dist.groupBy(x => x._1).mapValues(_.map(y => y._3))
+    val distances_list = anchors_dist
+      .groupBy(x => x._1)
+      .mapValues(_.map(y => y._3))
 
     // Keep only index with lowest distance
-    val low_index = anchors_dist.groupBy(x=> x._1).mapValues(_.minBy(y => y._3)).map(z => (z._1, z._2._2._2, z._2._3))
+    val low_index = anchors_dist
+      .groupBy(x=> x._1)
+      .mapValues(_.minBy(y => y._3))
+      .map(z => (z._1, z._2._2._2, z._2._3))
 
     // RDD to the format : Row, AnchorIndex, Dist_to_closest_anchor, List(Belongs to outerpartition of ith anchor)
-    val outer_belongings = low_index.zip(distances_list).map(x => (x._1._1, x._1._2, x._1._3, x._2._2.map(y => outer_val(x._1._3, y,distThreshold))))
+    val outer_belongings = low_index
+      .zip(distances_list)
+      .map(x => (x._1._1, x._1._2, x._1._3, x._2._2.map(y => outer_val(x._1._3, y,distThreshold))))
 
     val range_rdd = List.range(0, true_anchors_nb)
 
     // Filtered by partition , oputer partition
-    val list_fitered:List[RDD[String]]= for (i <- range_rdd) yield outer_belongings.filter(x => x._4.toList(i.toInt)).map(x => x._1.getAs[String](attrIndex))
+    val list_fitered:List[RDD[String]]= for (i <- range_rdd) yield outer_belongings
+      .filter(x => x._4.toList(i.toInt))
+      .map(x => x._1.getAs[String](attrIndex))
 
     val cross_filtered = list_fitered.map(x=> x.cartesian(x)) // match each element with every other element in its partition
 
     // remove unitary comparaision and sort tuples alphabetically for easy duplicates removing
-    val cross_sorted = cross_filtered.map(partion => partion.filter(x => !(x._1 == x._2)).map(x => if(x._1 > x._2) x.swap else x) )
+    val cross_sorted = cross_filtered
+      .map(partion => partion.filter(x => !(x._1 == x._2)).map(x => if(x._1 > x._2) x.swap else x) )
 
     // merge all partition and keep each pair only once
     val union_job = cross_sorted.reduce(_ union _).distinct()
