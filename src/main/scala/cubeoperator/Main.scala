@@ -1,28 +1,33 @@
 package cubeoperator
 
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext, sql}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.expressions._
 import org.apache.spark.sql.functions._
 import java.io._
 
+import org.apache.spark
+import org.apache.spark.sql.{SQLContext, SparkSession}
+
 object Main {
   def main(args: Array[String]) {
     val reducers = 10
 
-    val inputFile= "../lineorder_small.tbl"
-    val input = new File(getClass.getResource(inputFile).getFile).getPath
+    val inputFile= "/user/cs422-group38/lineorder_small.tbl"
+    //val input = new File(getClass.getResource(inputFile).getFile).getPath
 
-    val sparkConf = new SparkConf().setAppName("CS422-Project2").setMaster("local[16]")
+    val sparkConf = new SparkConf().setAppName("CS422-Project2") //.setMaster("local[*]")
     val ctx = new SparkContext(sparkConf)
-    val sqlContext = new org.apache.spark.sql.SQLContext(ctx)
+    //val sqlContext = new org.apache.spark.sql.SQLContext(ctx)
+    val sqlContext = new SQLContext(ctx)
+    //val sa = new spark.sql.SparkSession.Builder
 
     val df = sqlContext.read
       .format("com.databricks.spark.csv")
       .option("header", "true")
       .option("inferSchema", "true")
       .option("delimiter", "|")
-      .load(input)
+      .load(inputFile)
 
     val rdd = df.rdd
 
@@ -38,7 +43,7 @@ object Main {
     val res = cb.cube(dataset, groupingList, "lo_supplycost", "AVG")
 
 
-    res.filter(x=> x._1.contains("19971129")).take(200).foreach(println)
+    res.saveAsTextFile("./cube.txt")
 
     /*
        The above call corresponds to the query:
