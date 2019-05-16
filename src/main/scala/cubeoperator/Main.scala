@@ -16,7 +16,7 @@ object Main {
     val inputFile= "/user/cs422-group38/lineorder_small.tbl"
     //val input = new File(getClass.getResource(inputFile).getFile).getPath
 
-    val sparkConf = new SparkConf().setAppName("CS422-Project2") //.setMaster("local[*]")
+    val sparkConf = new SparkConf().setAppName("CS422-Project2_huck") //.setMaster("local[*]")
     val ctx = new SparkContext(sparkConf)
     //val sqlContext = new org.apache.spark.sql.SQLContext(ctx)
     val sqlContext = new SQLContext(ctx)
@@ -43,7 +43,7 @@ object Main {
     val res = cb.cube(dataset, groupingList, "lo_supplycost", "AVG")
 
 
-    res.saveAsTextFile("./cube.txt")
+    res.saveAsTextFile("./cube")
 
     /*
        The above call corresponds to the query:

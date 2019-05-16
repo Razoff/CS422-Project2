@@ -13,13 +13,14 @@ import java.io._
 
 object Main {
   def main(args: Array[String]) {     
-    val inputFile="../dblp_small.csv"    
+    val inputFile="/user/cs422-group38/dblp_10K.csv"
+    //val inputFile="/user/cs422-group38/dblp_small.csv"
     val numAnchors = 4
     val distanceThreshold = 2
     val attrIndex = 0    
         
-    val input = new File(getClass.getResource(inputFile).getFile).getPath    
-    val sparkConf = new SparkConf().setAppName("CS422-Project2").setMaster("local[*]")
+    //val input = new File(getClass.getResource(inputFile).getFile).getPath
+    val sparkConf = new SparkConf().setAppName("CS422-Project2huck")//.setMaster("local[*]")
     val ctx = new SparkContext(sparkConf)
     val sqlContext = new org.apache.spark.sql.SQLContext(ctx)   
     
@@ -28,7 +29,7 @@ object Main {
     .option("header", "true")
     .option("inferSchema", "true")
     .option("delimiter", ",")
-    .load(input)      
+    .load(inputFile)
     
     val rdd = df.rdd        
     val schema = df.schema.toList.map(x => x.name)    
@@ -39,12 +40,13 @@ object Main {
     val sj = new SimilarityJoin(numAnchors, distanceThreshold)
     val res = sj.similarity_join(dataset, attrIndex)           
     
-    val resultSize = res.count
-    println(resultSize)
+    //val resultSize = res.count
+    //println(resultSize)
     val t2 = System.nanoTime
             
     println((t2-t1)/(Math.pow(10,9)))
     //res.collect().foreach(println) // RETURNS 23
+    res.saveAsTextFile("./simjoin")
 
     /*
     // own distanbce func

@@ -84,7 +84,12 @@ class SimilarityJoin(numAnchors: Int, distThreshold:Int) extends java.io.Seriali
 
     // Return only pairs smaller or equal to treshold EACH PAIR is evaluated ONCE
     // The only duplicate distance evaluation is the one with anchor itself
-    return union_job.filter(x => distance(x._1, x._2) <= distThreshold)
+    val final_result = union_job.filter(x => distance(x._1,x._2) <= distThreshold)
+
+    // We need to output an RDD with (a,b) as well as (b,a) since we sorted we have to gen swapped values too
+    val final_result_swap = final_result.map(x => (x._2, x._1))
+
+    return final_result.union(final_result_swap)
   }
 }
 
