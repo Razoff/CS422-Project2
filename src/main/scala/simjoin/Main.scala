@@ -31,9 +31,9 @@ object Main {
     .option("delimiter", ",")
     .load(inputFile)
     
-    val rdd = df.rdd        
+    val rdd = df.rdd
     val schema = df.schema.toList.map(x => x.name)    
-    val dataset = new Dataset(rdd, schema)           
+    val dataset = new Dataset(rdd.sample(false, 0.1), schema)
     
     
     val t1 = System.nanoTime    

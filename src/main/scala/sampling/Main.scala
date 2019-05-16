@@ -11,9 +11,12 @@ object Main {
   def main(args: Array[String]) {
 
     val inputFile= "../lineorder_small.tbl"
+    //val inputFile= "/user/cs422-group38/lineorder_small.tbl"
+
+
     val input = new File(getClass.getResource(inputFile).getFile).getPath
 
-    val conf = new SparkConf().setAppName("app").setMaster("local[*]")
+    val conf = new SparkConf().setAppName("huck").setMaster("local[*]")
     val sc = SparkContext.getOrCreate(conf)
     val session = SparkSession.builder().getOrCreate();
 
@@ -22,30 +25,32 @@ object Main {
       .option("header", "true")
       .option("inferSchema", "true")
       .option("delimiter", "|")
+      //.load(inputFile)
       .load(input)
 
-    val rdd = RandomRDDs.uniformRDD(sc, 100000)
+    /*val rdd = RandomRDDs.uniformRDD(sc, 100000)
     val rdd2 = rdd.map(f => Row.fromSeq(Seq(f * 2, (f*10).toInt)))
 
-    //rdd2.take(10).foreach(println)
+    rdd2.take(10).foreach(println)
 
     val r2d2 = rdd2.map(x => Row.fromTuple(x.get(0), x.get(1).asInstanceOf[Double].toInt))
 
-    //r2d2.take(10).foreach(println)
+    r2d2.take(10).foreach(println)
 
     val table = session.createDataFrame(r2d2, StructType(
       StructField("A1", DoubleType, false) ::
       StructField("A2", IntegerType, false) ::
       Nil
-    ))
+    ))*/
 
     var desc = new Description
-    desc.lineitem = table
+    //desc.lineitem = table
     desc.e = 0.1
     desc.ci = 0.95
 
 
     val path_to_data = "./tpch_parquet_sf1/"
+    //val path_to_data = "/cs422-data/tpch/sf100/parquet/"
 
     desc.customer = session.read.parquet(path_to_data + "customer.parquet")
     desc.lineitem = df
@@ -57,8 +62,9 @@ object Main {
     desc.region = session.read.parquet(path_to_data + "region.parquet")
     desc.supplier = session.read.parquet(path_to_data + "supplier.parquet")
 
+    desc.lineitem.show()
 
-    val tmp = Sampler.sample(desc.lineitem, 1000000, desc.e, desc.ci)
+    val tmp = Sampler.sample(desc.lineitem, 10000000, desc.e, desc.ci)
     desc.samples = tmp._1
     desc.sampleDescription = tmp._2
 

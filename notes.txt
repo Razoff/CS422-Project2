@@ -1,0 +1,19 @@
+QCS : -> (groups)
+e, ci , budget
+
+|  _
+| / \	---- find smallest key
+|/   \
+________
+
+t_str +- Z_a/2 sqrt(U/n)
+
+u = sum (h:1 to n) n/nh Nh² Sh²
+
+ONE K FOR ALL -> nh = k
+
+t_str <= e
+
+n -> sum all x s.t. x = |s| if |s| < k, k, |s| >= k
+
+	
