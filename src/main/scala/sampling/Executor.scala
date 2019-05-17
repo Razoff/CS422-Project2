@@ -40,12 +40,16 @@ object Executor {
     get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
 
     session.sql(
-      "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty , sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_shipdate <= date_sub(date('1998-12-01'), " + p1 + ") group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus"
+      "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty , sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order " +
+        "from lineitem " +
+        "where l_shipdate <= date_sub(date('1998-12-01'), " +
+        p1 +
+        ") group by l_returnflag, l_linestatus " +
+        "order by l_returnflag, l_linestatus"
     ).show()
   }
 
   def execute_Q3(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
     assert(params.size == 2)
 
     val mktseg : String = params(0).asInstanceOf[String]
@@ -56,13 +60,41 @@ object Executor {
     desc.customer.createOrReplaceTempView("customer")
 
     session.sql(
-      "select l_orderkey, sum(l_extendedprice * (1 - l_discount)) as revenue, o_orderdate, o_shippriority from customer, orders, lineitem where c_mktsegment = '" + mktseg + "' and c_custkey = o_custkey and l_orderkey = o_orderkey and o_orderdate < date('" + date + "') and l_shipdate > date('" + date +"') group by l_orderkey, o_orderdate, o_shippriority order by revenue desc, o_orderdate"
+      "select l_orderkey, sum(l_extendedprice * (1 - l_discount)) as revenue, o_orderdate, o_shippriority " +
+        "from customer, orders, lineitem " +
+        "where c_mktsegment = '" + mktseg + "' and c_custkey = o_custkey and l_orderkey = o_orderkey and o_orderdate < date('" +
+        date +
+        "') and l_shipdate > date('" +
+        date +
+        "') group by l_orderkey, o_orderdate, o_shippriority order by revenue desc, o_orderdate"
     ).show()
 
   }
 
   def execute_Q5(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 2)
+
+    val name : String = params(0).asInstanceOf[String]
+    val date : String = params(1).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    desc.orders.createOrReplaceTempView("orders")
+    desc.customer.createOrReplaceTempView("customer")
+    desc.supplier.createOrReplaceTempView("supplier")
+    desc.nation.createOrReplaceTempView("nation")
+    desc.region.createOrReplaceTempView("region")
+
+    session.sql(
+      "select n_name, sum(l_extendedprice * (1 - l_discount)) as revenue " +
+        "from customer, orders, lineitem, supplier, nation, region " +
+        "where c_custkey = o_custkey and l_orderkey = o_orderkey and l_suppkey = s_suppkey and c_nationkey = s_nationkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = '" +
+        name +
+        "' and o_orderdate >= date('" +
+        date +
+        "')and o_orderdate < add_months(date('" +
+        date +
+        "'), 12) group by n_name order by revenue desc"
+    ).show()
   }
 
   def execute_Q6(desc: Description, session: SparkSession, params: List[Any]) = {
