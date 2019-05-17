@@ -22,7 +22,7 @@ object Sampler {
     val N = rows.count()
 
     //val ext_price_index = 5 // CLUSTER
-    val ext_price_index = 9 // TEST
+    val ext_price_index = 13 // TEST -> supplycost
 
     def getZ(): Double = {
       ci match {
@@ -108,8 +108,10 @@ object Sampler {
       //println(z * sqrt(error_value.collect().sum))
 
       // Check if we are inbounds
-      if (perc <= e && perc > 0){
+      if (perc <= e && perc > 0 ) {
         return (sample_data, perc)
+      }else if (perc == 0 && prb > 0.3){ // If it matches only to on elem drop said sample
+        return (null, perc)
       }else{
         return (null, perc)
       }
@@ -134,30 +136,36 @@ object Sampler {
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
         .groupBy(x => (x(index_1),x(index_2)))
-        //.map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        //.map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        //.map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList)))
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
+        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, nh, sh
 
       // Compute Nh according to book about blinkDB
-      val Nh_Sh = rows
+      val Nh_Sh = rows // TODO we can compute this before looking for the size of the sample
         .groupBy(x => (x(index_1),x(index_2)))
         .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList)))
         .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum))
+        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+
 
       // Get all Nh , nh , sh value corresponding together
-      val merged_rdd = nh_sh2
+      val merged_rdd = nh_sh2 // TODO remove sh2 no need to compute anymore
         .keyBy(x => x._1)
         .join(Nh_Sh.keyBy(x => x._1))
-        .map(x => (x._2._1._2, x._2._2._2, x._2._2._3))
+        .map(x => (x._2._1._2, x._2._2._2, x._2._2._3)) // (nh, Nh, Sh)
+
+      //val n:Double = nh_sh2.map(x => x._2).collect().sum // sum of nh = n
+      val n = N
 
       // Compute error value per h
       val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
+        .map(x => ((n / x._1) * Math.pow(x._2, 2) * x._3 )) // n/nh * Nh² * Sh²  for all h
+        .collect()
+        .sum / n // sum over all h and divide by n this is equal to V/N
 
 
       // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+      val true_error = z * Math.pow(error_value, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
 
       val mean_sample : List[Double] = sample_data
         .map(x => x(ext_price_index))
@@ -165,21 +173,15 @@ object Sampler {
         .map(x => x.asInstanceOf[Int].toDouble)
         .toList
 
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
+      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) /// mean_sample.length
 
       val perc : Double = true_error / mean_value
 
-      println("TRUE")
-      println(mean_value)
-      println(true_error)
-
-      //nh_sh2.take(10).foreach(println)
-
-      //println(z * sqrt(error_value.collect().sum))
-
       // Check if we are inbounds
-      if (perc <= e && perc > 0 ){
+      if (perc <= e && perc > 0 ) {
         return (sample_data, perc)
+      }else if (perc == 0 && prb > 0.3){ // If it matches only to one elem drop said sample
+        return (null, perc)
       }else{
         return (null, perc)
       }
@@ -306,8 +308,10 @@ object Sampler {
       //println(z * sqrt(error_value.collect().sum))
 
       // Check if we are inbounds
-      if (perc <= e && perc > 0){
+      if (perc <= e && perc > 0 ) {
         return (sample_data, perc)
+      }else if (perc == 0 && prb > 0.3){ // If it matches only to on elem drop said sample
+        return (null, perc)
       }else{
         return (null, perc)
       }
@@ -355,55 +359,36 @@ object Sampler {
 
     val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
     val small_samples_cluster : List[List[Int]] = List(List(4,10), List(13,14), List(11,12)) // in case of very small budget
-    val list_samples_test : List[List[Int]] = List(List(0,1), List(16), List(6,7))
+    val list_samples_test : List[List[Int]] = List(List(4,6), List(16), List(6,7))
 
     //def gen_return(arr : List[RDD[_]], arr_b : List[List[Int]])
 
     //val return_val = list_samples_cluster.map(x => (sample(x), x)).map(x => (x._1, getSize(x._1), x._2))
-    val return_val = list_samples_test
+    var return_val = list_samples_test
       .map(x => (sample(x), x))
       .filter(x => x._1 != null)
       .map(x => (x._1, getSize(x._1), x._2))
 
     var size_tot : Long = 0
-    var ret : (List[RDD[_]], List[List[Int]]) = (List(),List())
+    var i : Int = 0
 
-    for (elem <- return_val) {
-      if (elem != null) {
-        size_tot = size_tot + elem._2
-        println("ELEM2")
-        println(elem._2)
-        if (size_tot <= storageBudgetBytes) {
-          println("TAKEN")
-          ret._1.::(elem._1)
-          ret._2.::(elem._3)
-        }else {
-          size_tot = size_tot - elem._2
-        }
+    while(i < return_val.length){
+      size_tot = size_tot + return_val(i)._2
 
-      }
-      println("Sizetot")
-      println(size_tot)
-    }
-
-    if (ret._1.length == 0){
-      val return_val = small_samples_cluster.map(x => (sample(x), x)).map(x => (x._1, getSize(x._1), x._2))
-
-      size_tot = 0
-
-      for (elem <- return_val) {
-        if (elem != null) {
-          size_tot = size_tot + elem._2
-          if (size_tot <= storageBudgetBytes) {
-            ret._1.::(elem._1)
-            ret._2.::(elem._3)
-          }
-        }
+      if (size_tot > storageBudgetBytes){ // remove additional size and drop elem
+        size_tot = size_tot - return_val(i)._2
+        return_val = return_val.drop(i)
+      }else{
+        i = i+1
       }
     }
 
-    println("lliisstt")
-    ret._2.foreach(println)
+    val rdds = return_val.map(x => x._1).toList
+    val free_obj = return_val.map(x => x._3).toList
+
+    return (rdds, free_obj)
+
+    //return return_val.map(x => (x._1, x._3))
 
     /*val rr = sample_01(6, 0.001)
     rr._1.collect().foreach(println)
@@ -412,6 +397,5 @@ object Sampler {
     //val ex_rdd = sampling(key_sample)
 
     //return (List(ex_rdd), key_sample)
-    return ret
   }
 }
