@@ -379,34 +379,40 @@ object Sampler {
 
     //def gen_return(arr : List[RDD[_]], arr_b : List[List[Int]])
 
-    var return_val = list_samples_cluster
-      .zip(Nh_Sh_lst)
-      .map(x => (sample(x._1, x._2, 0.15, 0.8, 0.1), x._1))
-      .map(x => (x._1, getSize(x._1), x._2))
+    try {
+      var return_val = list_samples_cluster
+        .zip(Nh_Sh_lst)
+        .map(x => (sample(x._1, x._2, 0.15, 0.8, 0.1), x._1))
+        .map(x => (x._1, getSize(x._1), x._2))
 
-    //var return_val = list_samples_test
-    //  .map(x => (sample(x), x))
-    //  .filter(x => x._1 != null)
-    //  .map(x => (x._1, getSize(x._1), x._2))
+      //var return_val = list_samples_test
+      //  .map(x => (sample(x), x))
+      //  .filter(x => x._1 != null)
+      //  .map(x => (x._1, getSize(x._1), x._2))
 
-    var size_tot : Long = 0
-    var i : Int = 0
+      var size_tot: Long = 0
+      var i: Int = 0
 
-    while(i < return_val.length){
-      size_tot = size_tot + return_val(i)._2
+      while (i < return_val.length) {
+        size_tot = size_tot + return_val(i)._2
 
-      if (size_tot > storageBudgetBytes){ // remove additional size and drop elem
-        size_tot = size_tot - return_val(i)._2
-        return_val = return_val.drop(i)
-      }else{
-        i = i+1
+        if (size_tot > storageBudgetBytes) { // remove additional size and drop elem
+          size_tot = size_tot - return_val(i)._2
+          return_val = return_val.drop(i)
+        } else {
+          i = i + 1
+        }
       }
+
+      val rdds = return_val.map(x => x._1).toList
+      val free_obj = return_val.map(x => x._3).toList
+
+      return (rdds, free_obj)
+    } catch{
+      case _ : Throwable =>
+        println("Sampling failed go to fallback")
+        return  (List(rows.sample(false, 0.2)), List())
     }
-
-    val rdds = return_val.map(x => x._1).toList
-    val free_obj = return_val.map(x => x._3).toList
-
-    return (rdds, free_obj)
 
     //return return_val.map(x => (x._1, x._3))
 

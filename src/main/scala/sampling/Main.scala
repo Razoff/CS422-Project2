@@ -62,15 +62,24 @@ object Main {
     desc.region = session.read.parquet(path_to_data + "region.parquet")
     desc.supplier = session.read.parquet(path_to_data + "supplier.parquet")
 
-    desc.lineitem.show()
+    //desc.lineitem.show()
 
-    val tmp = Sampler.sample(desc.lineitem.sample(false, 0.3).toDF(), 10000000, desc.e, desc.ci)
-    desc.samples = tmp._1
-    desc.sampleDescription = tmp._2
+
+    //val tmp = Sampler.sample(desc.lineitem.sample(false, 0.3).toDF(), 10000000, desc.e, desc.ci)
+    //desc.samples = tmp._1
+    //desc.sampleDescription = tmp._2
+
+    desc.samples = List(desc.lineitem.sample(false, 0.2).rdd)
+    desc.sampleDescription = List()
 
     // check storage usage for samples
 
     // Execute first query
+
+    //desc.nation.show()
+    //desc.partsupp.show()
+
     Executor.execute_Q1(desc, session, List("3"))
+    //Executor.execute_Q11(desc, session, List("CANADA", "0.1"))
   }     
 }
