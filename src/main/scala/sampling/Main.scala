@@ -83,7 +83,8 @@ object Main {
 
     //Executor.execute_Q1(desc, session, List("3"))
     //Executor.execute_Q3(desc, session, List("AUTOMOBILE","1998-12-01"))
-    Executor.execute_Q5(desc, session, List("EUROPE", "1998-12-01"))
+    //Executor.execute_Q5(desc, session, List("EUROPE", "1998-12-01"))
+    Executor.execute_Q6(desc, session, List("1998-12-01", "0.05", "100"))
     //Executor.execute_Q11(desc, session, List("CANADA", "0.1"))
   }     
 }

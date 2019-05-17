@@ -98,7 +98,28 @@ object Executor {
   }
 
   def execute_Q6(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 3)
+
+    val date : String = params(0).asInstanceOf[String]
+    val disc : String = params(1).asInstanceOf[String]
+    val quan : String = params(2).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+
+    session.sql(
+      "select sum(l_extendedprice * l_discount) as revenue " +
+        "from lineitem " +
+        "where l_shipdate >= date('" +
+        date +
+        "')  and l_shipdate < add_months(date('" +
+        date +
+        "'),12) and l_discount between " +
+        disc +
+        " - 0.01 and " +
+        disc +
+        " + 0.01 and l_quantity < " + quan + " "
+    ).show()
+
   }
 
   def execute_Q7(desc: Description, session: SparkSession, params: List[Any]) = {
