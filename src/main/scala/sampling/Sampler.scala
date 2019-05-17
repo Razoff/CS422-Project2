@@ -21,8 +21,8 @@ object Sampler {
 
     val N = rows.count()
 
-    //val ext_price_index = 5 // CLUSTER
-    val ext_price_index = 13 // TEST -> supplycost
+    val ext_price_index = 5 // CLUSTER
+    //val ext_price_index = 13 // TEST -> supplycost
 
     def getZ(): Double = {
       ci match {
@@ -53,7 +53,7 @@ object Sampler {
 
     //rows.take(10).foreach(println)
 
-    def sample_01(index_1 : Int, prb : Double): (RDD[_], Double) = {
+    def sample_01(index_1 : Int, prb : Double, Nh_Sh :  RDD[((Any), Int, Double)]): (RDD[_], Double) = {
 
       // Isolate each unique value and attribute a % that we want tot ake
       val fractions = rows
@@ -71,85 +71,11 @@ object Sampler {
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
         .groupBy(x => (x(index_1)))
-        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .map(x => (x._1, x._2.size))
 
-      // Compute Nh according to book about blinkDB
-      val Nh = rows
-        .groupBy(x => (x(index_1)))
-        .map(x => ((x._1,x._2.size)))
 
       // Get all Nh , nh , sh value corresponding together
       val merged_rdd = nh_sh2
-        .keyBy(x => x._1)
-        .join(Nh.keyBy(x => x._1))
-        .map(x => (x._2._1._2, x._2._1._3, x._2._2._2))
-
-      // Compute error value per h
-      val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
-
-      // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
-
-      val mean_sample : List[Double] = sample_data
-        .map(x => x(ext_price_index))
-        .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
-        .toList
-
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
-
-      val perc : Double = true_error / mean_value
-
-      //nh_sh2.take(10).foreach(println)
-
-      //println(z * sqrt(error_value.collect().sum))
-
-      // Check if we are inbounds
-      if (perc <= e && perc > 0 ) {
-        return (sample_data, perc)
-      }else if (perc == 0 && prb > 0.3){ // If it matches only to on elem drop said sample
-        return (null, perc)
-      }else{
-        return (null, perc)
-      }
-
-    }
-
-    def sample_02(index_1 : Int, index_2 : Int, prb : Double): (RDD[_], Double) = {
-
-      // Isolate each unique value and attribute a % that we want tot ake
-      val fractions = rows
-        .map(x => (x(index_1),x(index_2)))
-        .distinct()
-        .map( x => (x,prb))
-        .collectAsMap()
-
-      // Stratified sampling (using ...exact since we want all possible group
-      val sample_data = rows
-        .keyBy(x => (x(index_1),x(index_2)))
-        .sampleByKeyExact(false, fractions)
-        .map(x => x._2)
-
-      // Calculate nh and sh2 according to formula in book about blinkDB
-      val nh_sh2 = sample_data
-        .groupBy(x => (x(index_1),x(index_2)))
-        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList)))
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, nh, sh
-
-      // Compute Nh according to book about blinkDB
-      val Nh_Sh = rows // TODO we can compute this before looking for the size of the sample
-        .groupBy(x => (x(index_1),x(index_2)))
-        .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList)))
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
-
-
-      // Get all Nh , nh , sh value corresponding together
-      val merged_rdd = nh_sh2 // TODO remove sh2 no need to compute anymore
         .keyBy(x => x._1)
         .join(Nh_Sh.keyBy(x => x._1))
         .map(x => (x._2._1._2, x._2._2._2, x._2._2._3)) // (nh, Nh, Sh)
@@ -170,7 +96,7 @@ object Sampler {
       val mean_sample : List[Double] = sample_data
         .map(x => x(ext_price_index))
         .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
+        .map(x => x.asInstanceOf[java.math.BigDecimal].doubleValue())
         .toList
 
       val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) /// mean_sample.length
@@ -188,63 +114,122 @@ object Sampler {
 
     }
 
-    def sample_03(index_1 : Int, index_2 : Int, index_3 : Int ,prb : Double): (RDD[_], Double) = {
+    def sample_02(index_1 : Int, index_2 : Int, prb : Double, Nh_Sh :  RDD[((Any,Any), Int, Double)]): (RDD[_], Double) = {
 
       // Isolate each unique value and attribute a % that we want tot ake
       val fractions = rows
-        .map(x => (x(index_1),x(index_2),x(index_3)))
+        .map(x => (x(index_1),x(index_2)))
         .distinct()
         .map( x => (x,prb))
         .collectAsMap()
 
       // Stratified sampling (using ...exact since we want all possible group
       val sample_data = rows
-        .keyBy(x => (x(index_1),x(index_2),x(index_3)))
+        .keyBy(x => (x(index_1),x(index_2)))
         .sampleByKeyExact(false, fractions)
         .map(x => x._2)
 
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
-        .groupBy(x => (x(index_1),x(index_2),x(index_3)))
-        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .groupBy(x => (x(index_1),x(index_2)))
+        .map(x => (x._1, x._2.size))
 
-      // Compute Nh according to book about blinkDB
-      val Nh = rows
-        .groupBy(x => (x(index_1),x(index_2),x(index_3)))
-        .map(x => ((x._1,x._2.size)))
 
       // Get all Nh , nh , sh value corresponding together
       val merged_rdd = nh_sh2
         .keyBy(x => x._1)
-        .join(Nh.keyBy(x => x._1))
-        .map(x => (x._2._1._2, x._2._1._3, x._2._2._2))
+        .join(Nh_Sh.keyBy(x => x._1))
+        .map(x => (x._2._1._2, x._2._2._2, x._2._2._3)) // (nh, Nh, Sh)
+
+      //val n:Double = nh_sh2.map(x => x._2).collect().sum // sum of nh = n
+      val n = N
 
       // Compute error value per h
       val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
+        .map(x => ((n / x._1) * Math.pow(x._2, 2) * x._3 )) // n/nh * Nh² * Sh²  for all h
+        .collect()
+        .sum / n // sum over all h and divide by n this is equal to V/N
+
 
       // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+      val true_error = z * Math.pow(error_value, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
 
       val mean_sample : List[Double] = sample_data
         .map(x => x(ext_price_index))
         .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
+        .map(x => x.asInstanceOf[java.math.BigDecimal].doubleValue())
         .toList
 
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
+      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) /// mean_sample.length
 
       val perc : Double = true_error / mean_value
 
-      //nh_sh2.take(10).foreach(println)
+      // Check if we are inbounds
+      if (perc <= e && perc > 0 ) {
+        return (sample_data, perc)
+      }else if (perc == 0 && prb > 0.3){ // If it matches only to one elem drop said sample
+        return (null, perc)
+      }else{
+        return (null, perc)
+      }
 
-      //println(z * sqrt(error_value.collect().sum))
+    }
+
+    def sample_03(index_1 : Int, index_2 : Int, index_3 : Int, prb : Double, Nh_Sh :  RDD[((Any,Any,Any), Int, Double)]): (RDD[_], Double) = {
+
+      // Isolate each unique value and attribute a % that we want tot ake
+      val fractions = rows
+        .map(x => (x(index_1),x(index_2), x(index_3)))
+        .distinct()
+        .map( x => (x,prb))
+        .collectAsMap()
+
+      // Stratified sampling (using ...exact since we want all possible group
+      val sample_data = rows
+        .keyBy(x => (x(index_1),x(index_2), x(index_3)))
+        .sampleByKeyExact(false, fractions)
+        .map(x => x._2)
+
+      // Calculate nh and sh2 according to formula in book about blinkDB
+      val nh_sh2 = sample_data
+        .groupBy(x => (x(index_1),x(index_2), x(index_3)))
+        .map(x => (x._1, x._2.size))
+
+
+      // Get all Nh , nh , sh value corresponding together
+      val merged_rdd = nh_sh2
+        .keyBy(x => x._1)
+        .join(Nh_Sh.keyBy(x => x._1))
+        .map(x => (x._2._1._2, x._2._2._2, x._2._2._3)) // (nh, Nh, Sh)
+
+      //val n:Double = nh_sh2.map(x => x._2).collect().sum // sum of nh = n
+      val n = N
+
+      // Compute error value per h
+      val error_value = merged_rdd
+        .map(x => ((n / x._1) * Math.pow(x._2, 2) * x._3 )) // n/nh * Nh² * Sh²  for all h
+        .collect()
+        .sum / n // sum over all h and divide by n this is equal to V/N
+
+
+      // Collect and compute final error
+      val true_error = z * Math.pow(error_value, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+
+      val mean_sample : List[Double] = sample_data
+        .map(x => x(ext_price_index))
+        .collect()
+        .map(x => x.asInstanceOf[java.math.BigDecimal].doubleValue())
+        .toList
+
+      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) /// mean_sample.length
+
+      val perc : Double = true_error / mean_value
 
       // Check if we are inbounds
-      if (perc <= e && perc > 0){
+      if (perc <= e && perc > 0 ) {
         return (sample_data, perc)
+      }else if (perc == 0 && prb > 0.3){ // If it matches only to one elem drop said sample
+        return (null, perc)
       }else{
         return (null, perc)
       }
@@ -253,7 +238,7 @@ object Sampler {
 
     // x(index_1),x(index_2),x(index_3),x(index_4)
 
-    def sample_04(index_1 : Int, index_2 : Int, index_3 : Int, index_4 : Int ,prb : Double): (RDD[_], Double) = {
+    def sample_04(index_1 : Int, index_2 : Int, index_3 : Int, index_4 : Int ,prb : Double, Nh_Sh :  RDD[((Any,Any,Any,Any), Int, Double)]): (RDD[_], Double) = {
 
       // Isolate each unique value and attribute a % that we want tot ake
       val fractions = rows
@@ -271,46 +256,42 @@ object Sampler {
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
         .groupBy(x => (x(index_1),x(index_2),x(index_3),x(index_4)))
-        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .map(x => (x._1, x._2.size))
 
-      // Compute Nh according to book about blinkDB
-      val Nh = rows
-        .groupBy(x => (x(index_1),x(index_2),x(index_3),x(index_4)))
-        .map(x => ((x._1,x._2.size)))
 
       // Get all Nh , nh , sh value corresponding together
       val merged_rdd = nh_sh2
         .keyBy(x => x._1)
-        .join(Nh.keyBy(x => x._1))
-        .map(x => (x._2._1._2, x._2._1._3, x._2._2._2))
+        .join(Nh_Sh.keyBy(x => x._1))
+        .map(x => (x._2._1._2, x._2._2._2, x._2._2._3)) // (nh, Nh, Sh)
+
+      //val n:Double = nh_sh2.map(x => x._2).collect().sum // sum of nh = n
+      val n = N
 
       // Compute error value per h
       val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
+        .map(x => ((n / x._1) * Math.pow(x._2, 2) * x._3 )) // n/nh * Nh² * Sh²  for all h
+        .collect()
+        .sum / n // sum over all h and divide by n this is equal to V/N
+
 
       // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+      val true_error = z * Math.pow(error_value, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
 
       val mean_sample : List[Double] = sample_data
         .map(x => x(ext_price_index))
         .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
+        .map(x => x.asInstanceOf[java.math.BigDecimal].doubleValue())
         .toList
 
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
+      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) /// mean_sample.length
 
       val perc : Double = true_error / mean_value
-
-      //nh_sh2.take(10).foreach(println)
-
-      //println(z * sqrt(error_value.collect().sum))
 
       // Check if we are inbounds
       if (perc <= e && perc > 0 ) {
         return (sample_data, perc)
-      }else if (perc == 0 && prb > 0.3){ // If it matches only to on elem drop said sample
+      }else if (perc == 0 && prb > 0.3){ // If it matches only to one elem drop said sample
         return (null, perc)
       }else{
         return (null, perc)
@@ -318,16 +299,16 @@ object Sampler {
 
     }
 
-    def sample(indexes : List[Int], start : Double = 0.03, stop : Double = 0.8, step : Double = 0.03): RDD[_] ={
+    def sample(indexes : List[Int], Nh_Sh : RDD[_] ,start : Double = 0.03, stop : Double = 0.8, step : Double = 0.03): RDD[_] ={
       var ret : (RDD[_], Double) = (null,0)
       var prob : Double = start
 
       while(ret._1 == null && prob < stop) {
         indexes.length match {
-          case 1 => ret = sample_01(indexes(0), prob)//._1
-          case 2 => ret = sample_02(indexes(0), indexes(1),prob)//._1
-          case 3 => ret = sample_03(indexes(0), indexes(1), indexes(2), prob)//._1
-          case 4 => ret = sample_04(indexes(0), indexes(1), indexes(2), indexes(3), prob)//._1
+          case 1 => ret = sample_01(indexes(0), prob, Nh_Sh.asInstanceOf[RDD[((Any), Int, Double)]])//._1
+          case 2 => ret = sample_02(indexes(0), indexes(1),prob, Nh_Sh.asInstanceOf[RDD[((Any,Any), Int, Double)]])//._1
+          case 3 => ret = sample_03(indexes(0), indexes(1), indexes(2), prob, Nh_Sh.asInstanceOf[RDD[((Any,Any,Any), Int, Double)]])//._1
+          case 4 => ret = sample_04(indexes(0), indexes(1), indexes(2), indexes(3), prob, Nh_Sh.asInstanceOf[RDD[((Any,Any,Any,Any), Int, Double)]])//._1
           case _ => ret = null
         }
         println("PERC")
@@ -357,17 +338,56 @@ object Sampler {
     //|l_orderkey|l_partkey|l_suppkey|l_linenumber|l_quantity|l_extendedprice|l_discount|l_tax|l_returnflag|l_linestatus|l_shipdate|l_commitdate|l_receiptdate|l_shipinstruct|l_shipmode| l_comment|
 
 
-    val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
+    //val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
+    val list_samples_cluster : List[List[Int]] = List(List(4,6,10))
     val small_samples_cluster : List[List[Int]] = List(List(4,10), List(13,14), List(11,12)) // in case of very small budget
     val list_samples_test : List[List[Int]] = List(List(4,6), List(16), List(6,7))
 
+    lazy val Nh_Sh_1 = rows
+      .groupBy(x => (x(4),x(6),x(10)))
+      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+
+    /*lazy val Nh_Sh_2 = rows
+      .groupBy(x => (x(8),x(9),x(10)))
+      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+
+    lazy val Nh_Sh_3 = rows
+      .groupBy(x => (x(10),x(11),x(12),x(14)))
+      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+
+    lazy val Nh_Sh_4 = rows
+      .groupBy(x => (x(4),x(13),x(14)))
+      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+
+    lazy val Nh_Sh_5 = rows
+      .groupBy(x => (x(2),x(4)))
+      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+
+    val Nh_Sh_lst = List(Nh_Sh_1, Nh_Sh_2, Nh_Sh_3, Nh_Sh_4, Nh_Sh_5)*/
+
+    val Nh_Sh_lst = List(Nh_Sh_1)
+
     //def gen_return(arr : List[RDD[_]], arr_b : List[List[Int]])
 
-    //val return_val = list_samples_cluster.map(x => (sample(x), x)).map(x => (x._1, getSize(x._1), x._2))
-    var return_val = list_samples_test
-      .map(x => (sample(x), x))
-      .filter(x => x._1 != null)
+    var return_val = list_samples_cluster
+      .zip(Nh_Sh_lst)
+      .map(x => (sample(x._1, x._2, 0.15, 0.8, 0.1), x._1))
       .map(x => (x._1, getSize(x._1), x._2))
+
+    //var return_val = list_samples_test
+    //  .map(x => (sample(x), x))
+    //  .filter(x => x._1 != null)
+    //  .map(x => (x._1, getSize(x._1), x._2))
 
     var size_tot : Long = 0
     var i : Int = 0
@@ -385,7 +405,7 @@ object Sampler {
 
     val rdds = return_val.map(x => x._1).toList
     val free_obj = return_val.map(x => x._3).toList
-    
+
     return (rdds, free_obj)
 
     //return return_val.map(x => (x._1, x._3))

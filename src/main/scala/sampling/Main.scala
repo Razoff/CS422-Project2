@@ -53,8 +53,8 @@ object Main {
     //val path_to_data = "/cs422-data/tpch/sf100/parquet/"
 
     desc.customer = session.read.parquet(path_to_data + "customer.parquet")
-    desc.lineitem = df
-    //desc.lineitem = session.read.parquet(path_to_data + "lineitem.parquet")
+    //desc.lineitem = df
+    desc.lineitem = session.read.parquet(path_to_data + "lineitem_small.parquet")
     desc.nation = session.read.parquet(path_to_data + "nation.parquet")
     desc.orders = session.read.parquet(path_to_data + "order.parquet")
     desc.part = session.read.parquet(path_to_data + "part.parquet")
@@ -64,7 +64,7 @@ object Main {
 
     desc.lineitem.show()
 
-    val tmp = Sampler.sample(desc.lineitem, 10000000, desc.e, desc.ci)
+    val tmp = Sampler.sample(desc.lineitem.sample(false, 0.3).toDF(), 10000000, desc.e, desc.ci)
     desc.samples = tmp._1
     desc.sampleDescription = tmp._2
 
