@@ -78,8 +78,10 @@ object Main {
 
     //desc.nation.show()
     //desc.partsupp.show()
+    //desc.customer.show()
 
-    Executor.execute_Q1(desc, session, List("3"))
+    //Executor.execute_Q1(desc, session, List("3"))
+    Executor.execute_Q3(desc, session, List("AUTOMOBILE","1998-12-01"))
     //Executor.execute_Q11(desc, session, List("CANADA", "0.1"))
   }     
 }

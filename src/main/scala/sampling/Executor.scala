@@ -27,16 +27,17 @@ object Executor {
     }
   }
 
+  def get_lineitem_df (desc : Description, session : SparkSession ,prefered_sample : List[Int]):DataFrame = {
+    return session.createDataFrame(select_sample(desc, List(1,2,3))
+      .map(x => Row(x))
+      .map(x  => x.get(0).asInstanceOf[Row]), desc.lineitem.schema)
+  }
+
   def execute_Q1(desc: Description, session: SparkSession, params: List[Any]) = {
     assert(params.size == 1)
     val p1 :String = params(0).asInstanceOf[String]
 
-    val lineitem : DataFrame = session.createDataFrame(select_sample(desc, List(1,2,3))
-      .map(x => Row(x))
-      .map(x  => x.get(0).asInstanceOf[Row]), desc.lineitem.schema)
-
-    lineitem.createOrReplaceTempView("lineitem")
-
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
 
     session.sql(
       "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty , sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_shipdate <= date_sub(date('1998-12-01'), " + p1 + ") group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus"
@@ -46,10 +47,18 @@ object Executor {
   def execute_Q3(desc: Description, session: SparkSession, params: List[Any]) = {
     // TODO: implement
     assert(params.size == 2)
-    // https://github.com/electrum/tpch-dbgen/blob/master/queries/3.sql
-    // using:
-    // params(0) as :1
-    // params(1) as :2
+
+    val mktseg : String = params(0).asInstanceOf[String]
+    val date : String = params(1).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    desc.orders.createOrReplaceTempView("orders")
+    desc.customer.createOrReplaceTempView("customer")
+
+    session.sql(
+      "select l_orderkey, sum(l_extendedprice * (1 - l_discount)) as revenue, o_orderdate, o_shippriority from customer, orders, lineitem where c_mktsegment = '" + mktseg + "' and c_custkey = o_custkey and l_orderkey = o_orderkey and o_orderdate < date('" + date + "') and l_shipdate > date('" + date +"') group by l_orderkey, o_orderdate, o_shippriority order by revenue desc, o_orderdate"
+    ).show()
+
   }
 
   def execute_Q5(desc: Description, session: SparkSession, params: List[Any]) = {
