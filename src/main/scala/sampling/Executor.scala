@@ -123,7 +123,37 @@ object Executor {
   }
 
   def execute_Q7(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 2)
+
+    val name1 : String = params(0).asInstanceOf[String]
+    val name2 : String = params(1).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    desc.supplier.createOrReplaceTempView("supplier")
+    desc.orders.createOrReplaceTempView("orders")
+    desc.customer.createOrReplaceTempView("customer")
+    desc.nation.createOrReplaceTempView("nation")
+
+    session.sql(
+      "select n1.n_name as supp_nation, n2.n_name as cust_nation, year(l_shipdate) as l_year, l_extendedprice * (1 - l_discount) as volume " +
+        "from supplier, lineitem, orders, customer, nation n1, nation n2 " +
+        "where s_suppkey = l_suppkey and o_orderkey = l_orderkey and c_custkey = o_custkey and s_nationkey = n1.n_nationkey and c_nationkey = n2.n_nationkey and ( (n1.n_name = '" +
+        name1 +
+        "' and n2.n_name = '" +
+        name2 +
+        "') or (n1.n_name = '" +
+        name2 +
+        "' and n2.n_name = '" +
+        name1 +
+        "') ) and l_shipdate between date('1995-01-01') and date('1996-12-31')"
+    ).createOrReplaceTempView("shipping")
+
+    session.sql(
+      "select supp_nation, cust_nation, l_year, sum(volume) as revenue " +
+        "from shipping " +
+        "group by supp_nation, cust_nation, l_year " +
+        "order by supp_nation, cust_nation, l_year "
+    ).show()
   }
 
   def execute_Q9(desc: Description, session: SparkSession, params: List[Any]) = {
