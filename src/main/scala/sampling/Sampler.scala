@@ -68,12 +68,14 @@ object Sampler {
         .sampleByKeyExact(false, fractions)
         .map(x => x._2)
 
+      //sample_data.groupBy(x => x(6)).take(10).foreach(println)
+
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
         .groupBy(x => (x(index_1)))
         .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+        .map(x => (x._1, x._2,x._4.map(y => ((y - x._3) * (y - x._3)) / (x._2).toDouble ).sum))
 
       // Compute Nh according to book about blinkDB
       val Nh = rows
@@ -88,30 +90,22 @@ object Sampler {
 
       // Compute error value per h
       val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
+        .map(x => (1 - x._1.toDouble / x._3.toDouble) * (x._3.toDouble / N.toDouble) * (x._3.toDouble / N.toDouble) * (x._2/ x._1.toDouble))
 
       // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+      val true_error = z * sqrt(error_value.collect().sum)
 
-      val mean_sample : List[Double] = sample_data
-        .map(x => x(ext_price_index))
-        .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
-        .toList
-
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
-
-      val perc : Double = true_error / mean_value
+      //sample_data.take(10).foreach(println)
 
       //nh_sh2.take(10).foreach(println)
 
       //println(z * sqrt(error_value.collect().sum))
 
       // Check if we are inbounds
-      if (perc <= e && perc > 0){
-        return (sample_data, perc)
+      if (true_error <= e ){
+        return (sample_data, true_error)
       }else{
-        return (null, perc)
+        return (null, true_error)
       }
 
     }
@@ -131,57 +125,44 @@ object Sampler {
         .sampleByKeyExact(false, fractions)
         .map(x => x._2)
 
+      //sample_data.groupBy(x => x(6)).take(10).foreach(println)
+
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
         .groupBy(x => (x(index_1),x(index_2)))
-        //.map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        //.map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        //.map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y(5) is extendedprice -> use it to calculate variance
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+        .map(x => (x._1, x._2,x._4.map(y => ((y - x._3) * (y - x._3)) / (x._2).toDouble ).sum))
 
       // Compute Nh according to book about blinkDB
-      val Nh_Sh = rows
+      val Nh = rows
         .groupBy(x => (x(index_1),x(index_2)))
-        .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList)))
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum))
+        .map(x => ((x._1,x._2.size)))
 
       // Get all Nh , nh , sh value corresponding together
       val merged_rdd = nh_sh2
         .keyBy(x => x._1)
-        .join(Nh_Sh.keyBy(x => x._1))
-        .map(x => (x._2._1._2, x._2._2._2, x._2._2._3))
+        .join(Nh.keyBy(x => x._1))
+        .map(x => (x._2._1._2, x._2._1._3, x._2._2._2))
 
       // Compute error value per h
       val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
-
+        .map(x => (1 - x._1.toDouble / x._3.toDouble) * (x._3.toDouble / N.toDouble) * (x._3.toDouble / N.toDouble) * (x._2/ x._1.toDouble))
 
       // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+      val true_error = z * sqrt(error_value.collect().sum)
 
-      val mean_sample : List[Double] = sample_data
-        .map(x => x(ext_price_index))
-        .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
-        .toList
-
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
-
-      val perc : Double = true_error / mean_value
-
-      println("TRUE")
-      println(mean_value)
-      println(true_error)
+      //sample_data.take(10).foreach(println)
 
       //nh_sh2.take(10).foreach(println)
 
       //println(z * sqrt(error_value.collect().sum))
 
       // Check if we are inbounds
-      if (perc <= e && perc > 0 ){
-        return (sample_data, perc)
+      if (true_error <= e ){
+        return (sample_data, true_error)
       }else{
-        return (null, perc)
+        return (null, true_error)
       }
 
     }
@@ -201,12 +182,14 @@ object Sampler {
         .sampleByKeyExact(false, fractions)
         .map(x => x._2)
 
+      //sample_data.groupBy(x => x(6)).take(10).foreach(println)
+
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
         .groupBy(x => (x(index_1),x(index_2),x(index_3)))
-        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y(5) is extendedprice -> use it to calculate variance
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+        .map(x => (x._1, x._2,x._4.map(y => ((y - x._3) * (y - x._3)) / (x._2).toDouble ).sum))
 
       // Compute Nh according to book about blinkDB
       val Nh = rows
@@ -221,35 +204,25 @@ object Sampler {
 
       // Compute error value per h
       val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
+        .map(x => (1 - x._1.toDouble / x._3.toDouble) * (x._3.toDouble / N.toDouble) * (x._3.toDouble / N.toDouble) * (x._2/ x._1.toDouble))
 
       // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+      val true_error = z * sqrt(error_value.collect().sum)
 
-      val mean_sample : List[Double] = sample_data
-        .map(x => x(ext_price_index))
-        .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
-        .toList
-
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
-
-      val perc : Double = true_error / mean_value
+      //sample_data.take(10).foreach(println)
 
       //nh_sh2.take(10).foreach(println)
 
       //println(z * sqrt(error_value.collect().sum))
 
       // Check if we are inbounds
-      if (perc <= e && perc > 0){
-        return (sample_data, perc)
+      if (true_error <= e ){
+        return (sample_data, true_error)
       }else{
-        return (null, perc)
+        return (null, true_error)
       }
 
     }
-
-    // x(index_1),x(index_2),x(index_3),x(index_4)
 
     def sample_04(index_1 : Int, index_2 : Int, index_3 : Int, index_4 : Int ,prb : Double): (RDD[_], Double) = {
 
@@ -266,12 +239,14 @@ object Sampler {
         .sampleByKeyExact(false, fractions)
         .map(x => x._2)
 
+      //sample_data.groupBy(x => x(6)).take(10).foreach(println)
+
       // Calculate nh and sh2 according to formula in book about blinkDB
       val nh_sh2 = sample_data
         .groupBy(x => (x(index_1),x(index_2),x(index_3),x(index_4)))
-        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y() is extendedprice -> use it to calculate variance
-        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3)) // FORMAT (key, length, average, list)
-        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, length, sh
+        .map(x => ((x._1, x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[Int].toDouble).toList))) // y(5) is extendedprice -> use it to calculate variance
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+        .map(x => (x._1, x._2,x._4.map(y => ((y - x._3) * (y - x._3)) / (x._2).toDouble ).sum))
 
       // Compute Nh according to book about blinkDB
       val Nh = rows
@@ -286,30 +261,22 @@ object Sampler {
 
       // Compute error value per h
       val error_value = merged_rdd
-        .map(x => (1 - x._1.toDouble / x._3.toDouble) * Math.pow(x._3.toDouble / N.toDouble, 2) * (x._2/ x._1.toDouble))
+        .map(x => (1 - x._1.toDouble / x._3.toDouble) * (x._3.toDouble / N.toDouble) * (x._3.toDouble / N.toDouble) * (x._2/ x._1.toDouble))
 
       // Collect and compute final error
-      val true_error = z * Math.pow(error_value.collect().sum, 0.5) // WE WANT THIS TO BE WHITHIN e% of the mean
+      val true_error = z * sqrt(error_value.collect().sum)
 
-      val mean_sample : List[Double] = sample_data
-        .map(x => x(ext_price_index))
-        .collect()
-        .map(x => x.asInstanceOf[Int].toDouble)
-        .toList
-
-      val mean_value : Double = mean_sample.foldLeft(0.0) (_ + _) / mean_sample.length
-
-      val perc : Double = true_error / mean_value
+      //sample_data.take(10).foreach(println)
 
       //nh_sh2.take(10).foreach(println)
 
       //println(z * sqrt(error_value.collect().sum))
 
       // Check if we are inbounds
-      if (perc <= e && perc > 0){
-        return (sample_data, perc)
+      if (true_error <= e ){
+        return (sample_data, true_error)
       }else{
-        return (null, perc)
+        return (null, true_error)
       }
 
     }
@@ -326,7 +293,6 @@ object Sampler {
           case 4 => ret = sample_04(indexes(0), indexes(1), indexes(2), indexes(3), prob)//._1
           case _ => ret = null
         }
-        println("PERC")
         println(prob)
         println(ret._2)
 
@@ -374,9 +340,8 @@ object Sampler {
         println("ELEM2")
         println(elem._2)
         if (size_tot <= storageBudgetBytes) {
-          println("TAKEN")
-          ret._1.::(elem._1)
-          ret._2.::(elem._3)
+          ret._1.+:(elem._1)
+          ret._2.+:(elem._3)
         }else {
           size_tot = size_tot - elem._2
         }
@@ -395,8 +360,8 @@ object Sampler {
         if (elem != null) {
           size_tot = size_tot + elem._2
           if (size_tot <= storageBudgetBytes) {
-            ret._1.::(elem._1)
-            ret._2.::(elem._3)
+            ret._1.+:(elem._1)
+            ret._2.+:(elem._3)
           }
         }
       }
