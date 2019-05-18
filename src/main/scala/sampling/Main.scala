@@ -93,5 +93,6 @@ object Main {
     //Executor.execute_Q11(desc, session, List("CANADA", "0.1"))
     //Executor.execute_Q12(desc, session, List("AIR", "FOB","1998-12-01"))
     //Executor.execute_Q17(desc, session, List("Brand#13", "JUMBO PKG"))
+    //Executor.execute_Q18(desc, session, List("10"))
   }     
 }

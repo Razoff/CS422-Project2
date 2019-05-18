@@ -276,7 +276,29 @@ object Executor {
   }
 
   def execute_Q18(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 1)
+
+    val quant: String = params(0).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1, 2, 3)).createOrReplaceTempView("lineitem")
+    desc.customer.createOrReplaceTempView("customer")
+    desc.orders.createOrReplaceTempView("orders")
+
+    session.sql(
+      "select c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, sum(l_quantity) " +
+        "from customer, orders, lineitem " +
+        "where o_orderkey in(" +
+          "select l_orderkey " +
+          "from lineitem " +
+          "group by l_orderkey " +
+          "having sum(l_quantity) > " +
+          quant +
+          " )" +
+        " and c_custkey = o_custkey and o_orderkey = l_orderkey " +
+        "group by c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice " +
+        "order by o_totalprice desc, o_orderdate"
+    ).show()
+
   }
 
   def execute_Q19(desc: Description, session: SparkSession, params: List[Any]) = {
