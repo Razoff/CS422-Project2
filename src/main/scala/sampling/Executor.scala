@@ -183,7 +183,26 @@ object Executor {
   }
 
   def execute_Q10(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 1)
+
+    val date : String = params(0).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    desc.customer.createOrReplaceTempView("customer")
+    desc.orders.createOrReplaceTempView("orders")
+    desc.nation.createOrReplaceTempView("nation")
+
+    session.sql(
+      "select c_custkey, c_name, sum(l_extendedprice * (1 - l_discount)) as revenue, c_acctbal, n_name, c_address, c_phone, c_comment " +
+        "from customer, orders, lineitem, nation " +
+        "where c_custkey = o_custkey and l_orderkey = o_orderkey and o_orderdate >= date('" +
+        date +
+        "') and o_orderdate < add_months(date('" +
+        date +
+        "'), 3) and l_returnflag = 'R' and c_nationkey = n_nationkey " +
+        "group by c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment " +
+        "order by revenue desc"
+    ).show()
   }
 
   def execute_Q11(desc: Description, session: SparkSession, params: List[Any]) = {
