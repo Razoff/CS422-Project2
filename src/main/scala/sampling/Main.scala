@@ -10,13 +10,13 @@ import java.io._
 object Main {
   def main(args: Array[String]) {
 
-    val inputFile= "../lineorder_small.tbl"
-    //val inputFile= "/user/cs422-group38/lineorder_small.tbl"
+    //val inputFile= "../lineorder_small.tbl"
+    val inputFile= "/user/cs422-group38/lineorder_small.tbl"
 
 
-    val input = new File(getClass.getResource(inputFile).getFile).getPath
+    //val input = new File(getClass.getResource(inputFile).getFile).getPath
 
-    val conf = new SparkConf().setAppName("huck").setMaster("local[*]")
+    val conf = new SparkConf().setAppName("huck")//.setMaster("local[*]")
     val sc = SparkContext.getOrCreate(conf)
     val session = SparkSession.builder().getOrCreate();
 
@@ -25,8 +25,8 @@ object Main {
       .option("header", "true")
       .option("inferSchema", "true")
       .option("delimiter", "|")
-      //.load(inputFile)
-      .load(input)
+      .load(inputFile)
+      //.load(input)
 
     /*val rdd = RandomRDDs.uniformRDD(sc, 100000)
     val rdd2 = rdd.map(f => Row.fromSeq(Seq(f * 2, (f*10).toInt)))
@@ -49,12 +49,13 @@ object Main {
     desc.ci = 0.95
 
 
-    val path_to_data = "./tpch_parquet_sf1/"
-    //val path_to_data = "/cs422-data/tpch/sf100/parquet/"
+    //val path_to_data = "./tpch_parquet_sf1/"
+    val path_to_data = "/cs422-data/tpch/sf100/parquet/"
 
     desc.customer = session.read.parquet(path_to_data + "customer.parquet")
     //desc.lineitem = df
-    desc.lineitem = session.read.parquet(path_to_data + "lineitem_small.parquet")
+    //desc.lineitem = session.read.parquet(path_to_data + "lineitem_small.parquet")
+    desc.lineitem = session.read.parquet(path_to_data + "lineitem.parquet")
     desc.nation = session.read.parquet(path_to_data + "nation.parquet")
     desc.orders = session.read.parquet(path_to_data + "order.parquet")
     desc.part = session.read.parquet(path_to_data + "part.parquet")
@@ -65,12 +66,13 @@ object Main {
     //desc.lineitem.show()
 
 
-    //val tmp = Sampler.sample(desc.lineitem.sample(false, 0.3).toDF(), 10000000, desc.e, desc.ci)
-    //desc.samples = tmp._1
-    //desc.sampleDescription = tmp._2
+    val tmp = Sampler.sample(desc.lineitem.sample(false, 0.3).toDF(), 10000000, desc.e, desc.ci) // I do not know if those value are correct by any order of magnitude
+    desc.samples = tmp._1
+    desc.sampleDescription = tmp._2
 
-    desc.samples = List(desc.lineitem.sample(false, 0.2).rdd)
-    desc.sampleDescription = List()
+    // Test configuration
+    //desc.samples = List(desc.lineitem.sample(false, 0.2).rdd)
+    //desc.sampleDescription = List()
 
     // check storage usage for samples
 
@@ -83,6 +85,7 @@ object Main {
     //desc.lineitem.show()
     // desc.part.show()
 
+    // Uncomment what is needed
     //Executor.execute_Q1(desc, session, List("3"))
     //Executor.execute_Q3(desc, session, List("AUTOMOBILE","1998-12-01"))
     //Executor.execute_Q5(desc, session, List("EUROPE", "1998-12-01"))
