@@ -346,6 +346,35 @@ object Executor {
   }
 
   def execute_Q20(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 3)
+
+    val like : String = params(0).asInstanceOf[String]
+    val date : String = params(1).asInstanceOf[String]
+    val name : String = params(2).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    desc.supplier.createOrReplaceTempView("supplier")
+    desc.nation.createOrReplaceTempView("nation")
+    desc.part.createOrReplaceTempView("part")
+    desc.partsupp.createOrReplaceTempView("partsupp")
+
+    session.sql(
+      "select s_name, s_address " +
+        "from supplier, nation " +
+        "where s_suppkey in (" +
+          "select ps_suppkey " +
+          "from partsupp " +
+          "where ps_partkey in (" +
+            "select p_partkey from part where p_name like '" + like + "%')" +
+          "and ps_availqty > (" +
+            "select 0.5 * sum(l_quantity) from lineitem where l_partkey = ps_partkey and l_suppkey = ps_suppkey and l_shipdate >= date('" +
+            date +
+            "') and l_shipdate < add_months(date('" +
+            date +
+            "'), 12)  ) )" +
+        "and s_nationkey = n_nationkey and n_name = '" + name + "' " +
+        "order by s_name"
+    ).show()
+
   }
 }
