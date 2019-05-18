@@ -81,7 +81,7 @@ object Main {
     //desc.customer.show()
     //desc.region.show()
     //desc.lineitem.show()
-    //desc.part.show()
+    // desc.part.show()
 
     //Executor.execute_Q1(desc, session, List("3"))
     //Executor.execute_Q3(desc, session, List("AUTOMOBILE","1998-12-01"))
@@ -94,5 +94,6 @@ object Main {
     //Executor.execute_Q12(desc, session, List("AIR", "FOB","1998-12-01"))
     //Executor.execute_Q17(desc, session, List("Brand#13", "JUMBO PKG"))
     //Executor.execute_Q18(desc, session, List("10"))
+    Executor.execute_Q19(desc, session, List("Brand#13", "Brand#42", "Brand#34", "5", "5", "5"))
   }     
 }

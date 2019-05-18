@@ -302,7 +302,47 @@ object Executor {
   }
 
   def execute_Q19(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 6)
+
+    val brand_1: String = params(0).asInstanceOf[String]
+    val brand_2: String = params(1).asInstanceOf[String]
+    val brand_3: String = params(2).asInstanceOf[String]
+    val quant_1: String = params(3).asInstanceOf[String]
+    val quant_2: String = params(4).asInstanceOf[String]
+    val quant_3: String = params(5).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1, 2, 3)).createOrReplaceTempView("lineitem")
+    desc.part.createOrReplaceTempView("part")
+
+    session.sql(
+      "select sum(l_extendedprice* (1 - l_discount)) as revenue " +
+        "from lineitem, part " +
+        "where ( " +
+        "p_partkey = l_partkey and p_brand = '" +
+        brand_1 +
+        "' and p_container in ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') and l_quantity >= " +
+        quant_1 +
+        " and l_quantity <= " +
+        quant_1 +
+        " + 10 and p_size between 1 and 5 and l_shipmode in ('AIR', 'AIR REG') and l_shipinstruct = 'DELIVER IN PERSON')" +
+        " or " +
+        "(p_partkey = l_partkey and p_brand = '" +
+        brand_2 +
+        "' and p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') and l_quantity >= " +
+        quant_2 +
+        " and l_quantity <= " +
+        quant_2 +
+        " + 10 and p_size between 1 and 10 and l_shipmode in ('AIR', 'AIR REG') and l_shipinstruct = 'DELIVER IN PERSON')" +
+        " or " +
+        "(p_partkey = l_partkey and p_brand = '" +
+        brand_3 +
+        "' and p_container in ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') and l_quantity >= " +
+        quant_3 +
+        " and l_quantity <= "+
+        quant_3 +
+        " + 10 and p_size between 1 and 15 and l_shipmode in ('AIR', 'AIR REG') and l_shipinstruct = 'DELIVER IN PERSON')"
+    ).show()
+
   }
 
   def execute_Q20(desc: Description, session: SparkSession, params: List[Any]) = {
