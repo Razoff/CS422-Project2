@@ -226,7 +226,31 @@ object Executor {
   }
 
   def execute_Q12(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 3)
+
+    val mode1 : String = params(0).asInstanceOf[String]
+    val mode2 : String = params(1).asInstanceOf[String]
+    val date : String = params(2).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    desc.orders.createOrReplaceTempView("orders")
+
+    session.sql(
+      "select l_shipmode, sum(" +
+        "case when o_orderpriority = '1-URGENT' or o_orderpriority = '2-HIGH' then 1 else 0 end) as high_line_count" +
+        ", sum(" +
+        "case when o_orderpriority <> '1-URGENT' and o_orderpriority <> '2-HIGH' then 1 else 0 end) as low_line_count " +
+        "from orders, lineitem " +
+        "where o_orderkey = l_orderkey and l_shipmode in ('" +
+        mode1 + "', '" + mode2 +
+        "') and l_commitdate < l_receiptdate and l_shipdate < l_commitdate and l_receiptdate >= date('" +
+        date +
+        "') and l_receiptdate < add_months(date('" +
+        date +
+        "'), 12) " +
+        "group by l_shipmode order by l_shipmode"
+    ).show()
+
   }
 
   def execute_Q17(desc: Description, session: SparkSession, params: List[Any]) = {

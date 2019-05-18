@@ -80,6 +80,7 @@ object Main {
     //desc.partsupp.show()
     //desc.customer.show()
     //desc.region.show()
+    //desc.lineitem.show()
 
     //Executor.execute_Q1(desc, session, List("3"))
     //Executor.execute_Q3(desc, session, List("AUTOMOBILE","1998-12-01"))
@@ -87,7 +88,8 @@ object Main {
     //Executor.execute_Q6(desc, session, List("1998-12-01", "0.05", "100"))
     //Executor.execute_Q7(desc, session, List("INDIA", "IRAN"))
     //Executor.execute_Q9(desc, session, List("a"))
-    Executor.execute_Q10(desc, session, List("1998-12-01"))
+    //Executor.execute_Q10(desc, session, List("1998-12-01"))
     //Executor.execute_Q11(desc, session, List("CANADA", "0.1"))
+    //Executor.execute_Q12(desc, session, List("AIR", "FOB","1998-12-01"))
   }     
 }
