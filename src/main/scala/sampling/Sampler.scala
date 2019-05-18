@@ -338,8 +338,8 @@ object Sampler {
     //|l_orderkey|l_partkey|l_suppkey|l_linenumber|l_quantity|l_extendedprice|l_discount|l_tax|l_returnflag|l_linestatus|l_shipdate|l_commitdate|l_receiptdate|l_shipinstruct|l_shipmode| l_comment|
 
 
-    //val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
-    val list_samples_cluster : List[List[Int]] = List(List(4,6,10))
+    val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
+    //val list_samples_cluster : List[List[Int]] = List(List(4,6,10))
     val small_samples_cluster : List[List[Int]] = List(List(4,10), List(13,14), List(11,12)) // in case of very small budget
     val list_samples_test : List[List[Int]] = List(List(4,6), List(16), List(6,7))
 
@@ -349,7 +349,7 @@ object Sampler {
       .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
       .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
 
-    /*lazy val Nh_Sh_2 = rows
+    lazy val Nh_Sh_2 = rows
       .groupBy(x => (x(8),x(9),x(10)))
       .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
       .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
@@ -373,9 +373,9 @@ object Sampler {
       .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
       .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
 
-    val Nh_Sh_lst = List(Nh_Sh_1, Nh_Sh_2, Nh_Sh_3, Nh_Sh_4, Nh_Sh_5)*/
+    val Nh_Sh_lst = List(Nh_Sh_1, Nh_Sh_2, Nh_Sh_3, Nh_Sh_4, Nh_Sh_5)
 
-    val Nh_Sh_lst = List(Nh_Sh_1)
+    //val Nh_Sh_lst = List(Nh_Sh_1)
 
     //def gen_return(arr : List[RDD[_]], arr_b : List[List[Int]])
 
