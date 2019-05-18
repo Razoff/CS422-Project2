@@ -254,7 +254,25 @@ object Executor {
   }
 
   def execute_Q17(desc: Description, session: SparkSession, params: List[Any]) = {
-    // TODO: implement
+    assert(params.size == 2)
+
+    val brand : String = params(0).asInstanceOf[String]
+    val container : String = params(1).asInstanceOf[String]
+
+    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    desc.part.createOrReplaceTempView("part")
+
+    session.sql(
+      "select sum(l_extendedprice) / 7.0 as avg_yearly " +
+        "from lineitem, part " +
+        "where p_partkey = l_partkey and p_brand = '" +
+        brand +
+        "' and p_container = '" +
+        container +
+        "' and l_quantity < ( " +
+          "select 0.2 * avg(l_quantity) from lineitem where l_partkey = p_partkey " +
+        ")"
+    ).show()
   }
 
   def execute_Q18(desc: Description, session: SparkSession, params: List[Any]) = {
