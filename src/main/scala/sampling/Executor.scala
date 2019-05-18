@@ -26,6 +26,12 @@ object Executor {
       return desc.samples(random_index)
     }
   }
+  //List(List(4,6,10) quantity discount shipdate
+  // List(8,9,10) returnflag linestatus shipdate
+  // List(10,11,12,14) shipdate commitdate receipedate shipmode
+  // List(4,13,14) quantity shipinstruct shipmode
+  // List(2,4)) partkey quantity
+
 
   def get_lineitem_df (desc : Description, session : SparkSession ,prefered_sample : List[Int]):DataFrame = {
     return session.createDataFrame(select_sample(desc, List(1,2,3))
@@ -37,7 +43,7 @@ object Executor {
     assert(params.size == 1)
     val p1 :String = params(0).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(8,9,10)).createOrReplaceTempView("lineitem")
 
     session.sql(
       "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty , sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order " +
@@ -55,7 +61,7 @@ object Executor {
     val mktseg : String = params(0).asInstanceOf[String]
     val date : String = params(1).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(8,9,10)).createOrReplaceTempView("lineitem")
     desc.orders.createOrReplaceTempView("orders")
     desc.customer.createOrReplaceTempView("customer")
 
@@ -77,7 +83,7 @@ object Executor {
     val name : String = params(0).asInstanceOf[String]
     val date : String = params(1).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(1,2,3,4,5,6)).createOrReplaceTempView("lineitem") // no subsample correct get one at random
     desc.orders.createOrReplaceTempView("orders")
     desc.customer.createOrReplaceTempView("customer")
     desc.supplier.createOrReplaceTempView("supplier")
@@ -104,7 +110,7 @@ object Executor {
     val disc : String = params(1).asInstanceOf[String]
     val quan : String = params(2).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(4,6,10)).createOrReplaceTempView("lineitem")
 
     session.sql(
       "select sum(l_extendedprice * l_discount) as revenue " +
@@ -128,7 +134,7 @@ object Executor {
     val name1 : String = params(0).asInstanceOf[String]
     val name2 : String = params(1).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(8,9,10)).createOrReplaceTempView("lineitem")
     desc.supplier.createOrReplaceTempView("supplier")
     desc.orders.createOrReplaceTempView("orders")
     desc.customer.createOrReplaceTempView("customer")
@@ -161,7 +167,7 @@ object Executor {
 
     val like : String = params(0).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(2,4)).createOrReplaceTempView("lineitem")
     desc.part.createOrReplaceTempView("part")
     desc.supplier.createOrReplaceTempView("supplier")
     desc.partsupp.createOrReplaceTempView("partsupp")
@@ -187,7 +193,7 @@ object Executor {
 
     val date : String = params(0).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(8,9,10)).createOrReplaceTempView("lineitem")
     desc.customer.createOrReplaceTempView("customer")
     desc.orders.createOrReplaceTempView("orders")
     desc.nation.createOrReplaceTempView("nation")
@@ -232,7 +238,7 @@ object Executor {
     val mode2 : String = params(1).asInstanceOf[String]
     val date : String = params(2).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(10,11,12,14)).createOrReplaceTempView("lineitem")
     desc.orders.createOrReplaceTempView("orders")
 
     session.sql(
@@ -259,7 +265,7 @@ object Executor {
     val brand : String = params(0).asInstanceOf[String]
     val container : String = params(1).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(2,4)).createOrReplaceTempView("lineitem")
     desc.part.createOrReplaceTempView("part")
 
     session.sql(
@@ -280,7 +286,7 @@ object Executor {
 
     val quant: String = params(0).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1, 2, 3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(2,4)).createOrReplaceTempView("lineitem")
     desc.customer.createOrReplaceTempView("customer")
     desc.orders.createOrReplaceTempView("orders")
 
@@ -311,7 +317,7 @@ object Executor {
     val quant_2: String = params(4).asInstanceOf[String]
     val quant_3: String = params(5).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1, 2, 3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(4,13,14)).createOrReplaceTempView("lineitem")
     desc.part.createOrReplaceTempView("part")
 
     session.sql(
@@ -329,7 +335,8 @@ object Executor {
         "(p_partkey = l_partkey and p_brand = '" +
         brand_2 +
         "' and p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') and l_quantity >= " +
-        quant_2 +
+        quant_2 +    //val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
+
         " and l_quantity <= " +
         quant_2 +
         " + 10 and p_size between 1 and 10 and l_shipmode in ('AIR', 'AIR REG') and l_shipinstruct = 'DELIVER IN PERSON')" +
@@ -352,7 +359,7 @@ object Executor {
     val date : String = params(1).asInstanceOf[String]
     val name : String = params(2).asInstanceOf[String]
 
-    get_lineitem_df(desc, session, List(1,2,3)).createOrReplaceTempView("lineitem")
+    get_lineitem_df(desc, session, List(8,9,10)).createOrReplaceTempView("lineitem")
     desc.supplier.createOrReplaceTempView("supplier")
     desc.nation.createOrReplaceTempView("nation")
     desc.part.createOrReplaceTempView("part")
