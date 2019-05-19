@@ -206,8 +206,83 @@ class CubeOperator(reducers: Int) {
 
   def cube_naive(dataset: Dataset, groupingAttributes: List[String], aggAttribute: String, agg: String): RDD[(String, Double)] = {
 
-    //TODO naive algorithm for cube computation
-    null
+    val rdd = dataset.getRDD()
+    val schema = dataset.getSchema()
+
+    val index = groupingAttributes.map(x => schema.indexOf(x))
+    val indexAgg = schema.indexOf(aggAttribute)
+    val range = Range(0, index.length)
+    val perms = Range(0, index.length).flatMap(i => range.combinations(i).toSet)
+
+    val partition_step_one = rdd
+      .map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))
+
+    val single_lines = rdd
+      .map(x => ((index.map(y => x.get(y))), x.get(indexAgg).asInstanceOf[Int]))
+
+    val map01 = partition_step_one
+        .map(x => perms.map(p => (x._1.zipWithIndex.map{case(e, i) => if(p contains i) Some(e) else None}, x._2)))
+        .flatMap(x => x)
+
+    agg match {
+      case "COUNT" =>
+        val map_reduce = map01
+          .map(x => (x._1, 1))
+          .reduceByKey(_+_)
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        val single_reduce = single_lines
+          .map(x => (x._1, 1))
+          .reduceByKey(_+_)
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        return map_reduce.union(single_reduce)
+
+      case "SUM" =>
+        val map_reduce = map01
+          .reduceByKey(_+_)
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        val single_reduce = single_lines
+          .reduceByKey(_+_)
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        return map_reduce.union(single_reduce)
+
+      case "MIN" =>
+        val map_reduce = map01
+          .reduceByKey(math.min(_,_))
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        val single_reduce = single_lines
+          .reduceByKey(math.min(_,_))
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        return map_reduce.union(single_reduce)
+
+      case "MAX" =>
+        val map_reduce = map01
+          .reduceByKey(math.max(_,_))
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        val single_reduce = single_lines
+          .reduceByKey(math.max(_,_))
+          .map(x => (x._1.mkString(", ").replace("Some(", "").replace(")", ""), x._2.toDouble))
+
+        return map_reduce.union(single_reduce)
+
+      case "AVG" =>
+        val count = cube_naive(dataset, groupingAttributes, aggAttribute, "COUNT")
+        val sum = cube_naive(dataset, groupingAttributes, aggAttribute, "SUM")
+
+        return count
+          .join(sum)
+          .map(x => (x._1, x._2._2 / x._2._1) )
+
+      case _ =>
+        println("BAD AGGREGATE")
+        return null
+    }
   }
 
 }
