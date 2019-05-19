@@ -21,6 +21,10 @@ object Sampler {
 
     val N = rows.count()
 
+    //val random_sample = rows.sample(false, 0.1)
+    //val estimate_row_size : Long = SizeEstimator.estimate(random_sample.collect()) / random_sample.count()
+    val estimate_row_size : Long = 836
+
     val ext_price_index = 5 // CLUSTER
     //val ext_price_index = 13 // TEST -> supplycost
 
@@ -36,7 +40,22 @@ object Sampler {
     }
 
     def getSize(input : RDD[_]): Long = {
-      return SizeEstimator.estimate(input.collect())
+      return input.count() * estimate_row_size
+    }
+    def emergency_sample() : (List[RDD[_]],_) ={
+      var frac = 0.30
+
+      var ret = rows.sample(false, frac)
+
+      while (getSize(ret) > storageBudgetBytes && frac > 0){
+        frac = frac - 0.05
+        ret = rows.sample(false, frac)
+      }
+      if (frac < 0){
+        return (List(rows.sample(false, 0.01)), List(1,2,3,4,5,6,7,8,9))
+      }else {
+        return (List(ret), List(List(1, 2, 3, 4, 5, 6, 7, 8, 9)))
+      }
     }
 
     val z = getZ()
@@ -311,9 +330,6 @@ object Sampler {
           case 4 => ret = sample_04(indexes(0), indexes(1), indexes(2), indexes(3), prob, Nh_Sh.asInstanceOf[RDD[((Any,Any,Any,Any), Int, Double)]])//._1
           case _ => ret = null
         }
-        println("PERC")
-        println(prob)
-        println(ret._2)
 
         prob = prob + step
       }
@@ -338,28 +354,30 @@ object Sampler {
     //|l_orderkey|l_partkey|l_suppkey|l_linenumber|l_quantity|l_extendedprice|l_discount|l_tax|l_returnflag|l_linestatus|l_shipdate|l_commitdate|l_receiptdate|l_shipinstruct|l_shipmode| l_comment|
 
 
-    val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
+    try {
+
+      val list_samples_cluster : List[List[Int]] = List(List(4,6,10), List(8,9,10), List(10,11,12,14), List(4,13,14), List(2,4))
     //val list_samples_cluster : List[List[Int]] = List(List(4,6,10))
-    val small_samples_cluster : List[List[Int]] = List(List(4,10), List(13,14), List(11,12)) // in case of very small budget
-    val list_samples_test : List[List[Int]] = List(List(4,6), List(16), List(6,7))
+      val small_samples_cluster : List[List[Int]] = List(List(4,10), List(13,14), List(11,12)) // in case of very small budget
+      val list_samples_test : List[List[Int]] = List(List(4,6), List(16), List(6,7))
 
-    lazy val Nh_Sh_1 = rows
-      .groupBy(x => (x(4),x(6),x(10)))
-      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
-      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
-      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+      lazy val Nh_Sh_1 = rows
+        .groupBy(x => (x(4),x(6),x(10)))
+        .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
 
-    lazy val Nh_Sh_2 = rows
-      .groupBy(x => (x(8),x(9),x(10)))
-      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
-      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
-      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+      lazy val Nh_Sh_2 = rows
+        .groupBy(x => (x(8),x(9),x(10)))
+        .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
 
-    lazy val Nh_Sh_3 = rows
-      .groupBy(x => (x(10),x(11),x(12),x(14)))
-      .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
-      .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
-      .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
+      lazy val Nh_Sh_3 = rows
+        .groupBy(x => (x(10),x(11),x(12),x(14)))
+        .map(x => ((x._1,x._2.size, x._2.map(y => y(ext_price_index).asInstanceOf[java.math.BigDecimal].doubleValue()).toList)))
+        .map(x => (x._1,x._2, x._3.sum / x._3.length.toDouble, x._3))
+        .map(x => (x._1, x._2,x._4.map(y => Math.pow(y - x._3, 2) / (x._2).toDouble ).sum)) // key, Nh, Sh
 
     lazy val Nh_Sh_4 = rows
       .groupBy(x => (x(4),x(13),x(14)))
@@ -379,7 +397,7 @@ object Sampler {
 
     //def gen_return(arr : List[RDD[_]], arr_b : List[List[Int]])
 
-    try {
+
       var return_val = list_samples_cluster
         .zip(Nh_Sh_lst)
         .map(x => (sample(x._1, x._2, 0.15, 0.8, 0.1), x._1))
@@ -398,20 +416,28 @@ object Sampler {
 
         if (size_tot > storageBudgetBytes) { // remove additional size and drop elem
           size_tot = size_tot - return_val(i)._2
-          return_val = return_val.drop(i)
+          return_val = return_val.filter(x => x._3 != return_val(i)._3)
         } else {
           i = i + 1
         }
       }
 
+
       val rdds = return_val.map(x => x._1).toList
       val free_obj = return_val.map(x => x._3).toList
 
-      return (rdds, free_obj)
+
+      if (rdds.length == 0){
+        println("Sampling failed go to fallback")
+        return emergency_sample()
+      }else {
+        return (rdds, free_obj)
+      }
+
     } catch{
       case _ : Throwable =>
         println("Sampling failed go to fallback")
-        return  (List(rows.sample(false, 0.2)), List())
+        return  emergency_sample()
     }
 
     //return return_val.map(x => (x._1, x._3))

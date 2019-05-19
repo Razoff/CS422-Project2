@@ -22,7 +22,7 @@ object Executor {
       return desc.samples(sample_list.indexOf(prefered_sample))
     }else{ // If we did not get our favourite sample just pick at random
       val rand = new Random(System.currentTimeMillis())
-      val random_index = rand.nextInt(sample_list.length)
+      val random_index = rand.nextInt(desc.samples.length)
       return desc.samples(random_index)
     }
   }
